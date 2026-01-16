@@ -70,3 +70,28 @@ router.post('/departments', async (req, res) => {
 // (คุณสามารถเพิ่ม PUT/DELETE departments ทำนองเดียวกับ queue-types ได้เลยครับ)
 
 module.exports = router;
+
+router.get('/personnel', async (req, res) => {
+  try {
+    const [rows] = await db.query('SELECT * FROM personnel WHERE is_active = 1 ORDER BY fullname');
+    res.json(rows);
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+router.post('/personnel', async (req, res) => {
+  const { fullname, nickname } = req.body;
+  try {
+    const [result] = await db.query('INSERT INTO personnel (fullname, nickname) VALUES (?, ?)', [fullname, nickname]);
+    res.json({ success: true, id: result.insertId });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// ลบ (Soft Delete)
+router.delete('/personnel/:id', async (req, res) => {
+  try {
+    await db.query('UPDATE personnel SET is_active = 0 WHERE id = ?', [req.params.id]);
+    res.json({ success: true });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+module.exports = router;
