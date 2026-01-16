@@ -3,7 +3,7 @@ const router = express.Router();
 const db = require('../config/db');
 
 // ==========================================
-// Helper Function: บันทึกประวัติการทำงาน (Log)
+// Helper Function: บันทึก Log ลง Database
 // ==========================================
 const addLog = async (queueId, action, details, personnelId) => {
   try {
@@ -17,7 +17,7 @@ const addLog = async (queueId, action, details, personnelId) => {
 };
 
 // ==========================================
-// 1. Config & Master Data (ดึงข้อมูลสำหรับ Dropdown)
+// 1. Config (ดึงข้อมูลตัวเลือกต่างๆ)
 // ==========================================
 router.get('/config', async (req, res) => {
   try {
@@ -28,15 +28,13 @@ router.get('/config', async (req, res) => {
     
     res.json({ types, roles, departments: depts, counters });
   } catch (err) {
-    console.error(err);
     res.status(500).json({ error: err.message });
   }
 });
 
 // ==========================================
-// 2. ดึงรายการคิว (Dashboard)
+// 2. Dashboard List (ดึงคิวที่ยังไม่จบ)
 // ==========================================
-// ตัวอย่าง: GET /api/queues?dept_id=1
 router.get('/', async (req, res) => {
   const { dept_id } = req.query;
   try {
@@ -53,8 +51,6 @@ router.get('/', async (req, res) => {
     `;
     
     const params = [];
-    
-    // ถ้ามีการระบุแผนก ให้กรองเฉพาะแผนกนั้น
     if (dept_id) {
       sql += ' AND q.current_department_id = ?';
       params.push(dept_id);
@@ -68,18 +64,36 @@ router.get('/', async (req, res) => {
 });
 
 // ==========================================
-// 3. สร้างคิวใหม่ (Kiosk / Reception)
+// 3. Queue History Logs (สำหรับ Timeline) ⭐ สำคัญ
+// ==========================================
+router.get('/:id/logs', async (req, res) => {
+  try {
+    const [rows] = await db.query(`
+      SELECT l.*, p.fullname as staff_name 
+      FROM queue_logs l 
+      LEFT JOIN personnel p ON l.personnel_id = p.id
+      WHERE l.queue_id = ? 
+      ORDER BY l.created_at DESC
+    `, [req.params.id]);
+    res.json(rows);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ==========================================
+// 4. Create Queue (สร้างคิวใหม่)
 // ==========================================
 router.post('/create', async (req, res) => {
-  const { type_id, role_id, personnel_id } = req.body; // รับ personnel_id เพิ่ม
+  const { type_id, role_id, personnel_id } = req.body;
   const io = req.io;
 
   try {
-    // 3.1 หาแผนกแรกสุด (จุดลงรับเอกสาร) เป็นค่าเริ่มต้น
+    // 4.1 หาแผนกแรกสุด
     const [firstDept] = await db.query('SELECT id FROM departments ORDER BY sort_order ASC LIMIT 1');
     const startDeptId = firstDept.length > 0 ? firstDept[0].id : null;
 
-    // 3.2 สร้างเลขคิว (Running Number)
+    // 4.2 สร้างเลขคิว
     const [typeRows] = await db.query('SELECT code FROM queue_types WHERE id = ?', [type_id]);
     const typeCode = typeRows[0]?.code || 'Q';
     
@@ -90,7 +104,7 @@ router.post('/create', async (req, res) => {
     const nextNum = countRows[0].count + 1;
     const queueNumber = `${typeCode}${String(nextNum).padStart(3, '0')}`;
 
-    // 3.3 บันทึกลง Database
+    // 4.3 Insert
     const [result] = await db.query(
       `INSERT INTO queues (queue_number, type_id, role_id, current_department_id, status) 
        VALUES (?, ?, ?, ?, 'WAITING')`,
@@ -98,15 +112,12 @@ router.post('/create', async (req, res) => {
     );
 
     const newQueueId = result.insertId;
-    const newQueue = { id: newQueueId, queue_number: queueNumber };
-
-    // 3.4 บันทึก Log
-    await addLog(newQueueId, 'CREATE', `สร้างบัตรคิวใหม่ (${queueNumber})`, personnel_id);
     
-    // 3.5 แจ้งเตือน Realtime ไปยังแผนกแรก
+    // 4.4 Log & Notify
+    await addLog(newQueueId, 'CREATE', `ออกบัตรคิว ${queueNumber}`, personnel_id);
     io.emit('queue_update', { dept_id: startDeptId }); 
     
-    res.status(201).json(newQueue);
+    res.status(201).json({ id: newQueueId, queue_number: queueNumber });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Server Error' });
@@ -114,24 +125,24 @@ router.post('/create', async (req, res) => {
 });
 
 // ==========================================
-// 4. ย้ายงาน / ส่งต่องาน (Transfer)
+// 5. Single Transfer (ส่งงาน 1 รายการ)
 // ==========================================
 router.put('/:id/transfer', async (req, res) => {
-  const { id } = req.params;
   const { target_dept_id, target_counter_id, status, personnel_id } = req.body; 
+  const { id } = req.params;
   const io = req.io;
 
   try {
-    // 4.1 ดึงข้อมูลเก่าเพื่อเอามาเขียน Log
-    const [oldData] = await db.query(
-      `SELECT d.name as dept_name FROM queues q 
-       LEFT JOIN departments d ON q.current_department_id = d.id 
-       WHERE q.id = ?`, 
-      [id]
-    );
-    const oldDeptName = oldData[0]?.dept_name || 'Unknown';
+    // 5.1 หาชื่อแผนกเก่า/ใหม่ เพื่อบันทึก Log
+    const [oldQ] = await db.query(`
+        SELECT d.name FROM queues q LEFT JOIN departments d ON q.current_department_id = d.id WHERE q.id = ?
+    `, [id]);
+    const oldDeptName = oldQ[0]?.name || 'จุดเดิม';
 
-    // 4.2 สร้าง SQL สำหรับอัปเดต
+    const [newD] = await db.query('SELECT name FROM departments WHERE id = ?', [target_dept_id]);
+    const newDeptName = newD[0]?.name || 'จุดใหม่';
+
+    // 5.2 Update SQL
     let sql = 'UPDATE queues SET current_department_id = ?, updated_at = NOW()';
     const params = [target_dept_id];
 
@@ -139,8 +150,8 @@ router.put('/:id/transfer', async (req, res) => {
       sql += ', current_counter_id = ?';
       params.push(target_counter_id);
     } else {
-        // ถ้าส่งข้ามแผนก ให้เคลียร์ช่องบริการเดิมทิ้ง
-        sql += ', current_counter_id = NULL';
+      // ย้ายแผนก -> เคลียร์ช่องบริการ
+      sql += ', current_counter_id = NULL';
     }
 
     if (status) {
@@ -151,17 +162,10 @@ router.put('/:id/transfer', async (req, res) => {
     sql += ' WHERE id = ?';
     params.push(id);
 
-    // รันคำสั่ง Update
     await db.query(sql, params);
 
-    // 4.3 ดึงชื่อแผนกใหม่เพื่อบันทึก Log
-    const [newDeptData] = await db.query('SELECT name FROM departments WHERE id = ?', [target_dept_id]);
-    const newDeptName = newDeptData[0]?.name || target_dept_id;
-
-    // 4.4 บันทึก Log
+    // 5.3 Log & Notify
     await addLog(id, 'TRANSFER', `ส่งงาน: ${oldDeptName} -> ${newDeptName}`, personnel_id);
-
-    // 4.5 แจ้งเตือน Realtime (Refresh ทุกจอ)
     io.emit('queue_update', { msg: 'transfer' });
 
     res.json({ success: true });
@@ -171,17 +175,50 @@ router.put('/:id/transfer', async (req, res) => {
 });
 
 // ==========================================
-// 5. จบงาน (Complete)
+// 6. Bulk Transfer (ส่งงานเป็นชุด)
 // ==========================================
-router.put('/:id/complete', async (req, res) => {
-  const { id } = req.params;
-  const { personnel_id } = req.body;
+router.post('/transfer-bulk', async (req, res) => {
+  const { queue_ids, target_dept_id, personnel_id } = req.body;
   const io = req.io;
 
+  if (!queue_ids || queue_ids.length === 0) return res.status(400).json({ error: 'No queues selected' });
+
   try {
-    await db.query("UPDATE queues SET status = 'COMPLETED', updated_at = NOW() WHERE id = ?", [id]);
+    const [dept] = await db.query('SELECT name FROM departments WHERE id = ?', [target_dept_id]);
+    const targetName = dept[0]?.name || target_dept_id;
+
+    // แปลง array เป็น string "1,2,3"
+    const idsString = queue_ids.join(','); 
     
-    await addLog(id, 'COMPLETE', 'จบงาน/ให้บริการเสร็จสิ้น', personnel_id);
+    // Update ทีเดียว
+    await db.query(
+      `UPDATE queues 
+       SET current_department_id = ?, current_counter_id = NULL, updated_at = NOW(), status = 'WAITING' 
+       WHERE id IN (${idsString})`,
+      [target_dept_id]
+    );
+
+    // วนลูปบันทึก Log รายตัว
+    for (const qId of queue_ids) {
+      await addLog(qId, 'BULK_TRANSFER', `ย้ายกลุ่มไปยัง ${targetName}`, personnel_id);
+    }
+
+    io.emit('queue_update', { msg: 'bulk_transfer' });
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ==========================================
+// 7. Complete (จบงาน)
+// ==========================================
+router.put('/:id/complete', async (req, res) => {
+  const { personnel_id } = req.body;
+  const io = req.io;
+  try {
+    await db.query("UPDATE queues SET status = 'COMPLETED', updated_at = NOW() WHERE id = ?", [req.params.id]);
+    await addLog(req.params.id, 'COMPLETE', 'จบงาน', personnel_id);
     
     io.emit('queue_update', { msg: 'completed' });
     res.json({ success: true });
@@ -191,7 +228,7 @@ router.put('/:id/complete', async (req, res) => {
 });
 
 // ==========================================
-// 6. ดึงรายละเอียดคิว (สำหรับ Tracking/QR)
+// 8. Get Single Queue (For QR/Tracking)
 // ==========================================
 router.get('/:id', async (req, res) => {
   try {
