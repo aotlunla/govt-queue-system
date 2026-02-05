@@ -16,6 +16,10 @@ dotenv.config();
 const app = express();
 const server = http.createServer(app);
 
+// Trust proxy - Required for Railway/Vercel/Cloud deployments behind reverse proxy
+// This allows express-rate-limit to correctly identify client IPs
+app.set('trust proxy', 1);
+
 const allowedOrigin = process.env.ALLOWED_ORIGIN || "http://localhost:3000";
 
 // Setup Socket.io (รองรับ Frontend ที่รัน port 3000)
