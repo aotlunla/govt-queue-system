@@ -1,65 +1,109 @@
-import Image from "next/image";
+'use client';
 
-export default function Home() {
+import { useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { Search, Ticket, ArrowRight } from 'lucide-react';
+import { Footer } from '@/components/Footer';
+import { DynamicLogo } from '@/components/DynamicLogo';
+import { GeistSans } from 'geist/font/sans';
+import { GeistMono } from 'geist/font/mono';
+
+export default function LandingPage() {
+  const router = useRouter();
+  const [queueNumber, setQueueNumber] = useState('');
+
+  const handleSearch = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!queueNumber.trim()) return;
+
+    // Format: YYMMDD + QueueNumber (e.g., A001 -> 260127A001)
+    // If the user enters the full code, we use it as is.
+    // Otherwise, we prepend the date.
+
+    let targetCode = queueNumber.trim().toUpperCase();
+
+    // Simple heuristic: if it's short (e.g. A001), prepend date. 
+    // If it's long (e.g. 260127A001), assume it's full.
+    if (targetCode.length < 8) {
+      const now = new Date();
+      const yy = String(now.getFullYear()).slice(-2); // 26
+      // Month is 0-indexed, so +1. PadStart ensures '01' instead of '1'
+      const mm = String(now.getMonth() + 1).padStart(2, '0');
+      const dd = String(now.getDate()).padStart(2, '0');
+
+      const prefix = `${yy}${mm}${dd}`;
+      targetCode = `${prefix}${targetCode}`;
+    }
+
+    router.push(`/tracking/${targetCode}`);
+  };
+
   return (
-    <div className="flex min-h-screen items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex min-h-screen w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
+    <div className={`min-h-[100dvh] bg-[#F2F2F7] flex flex-col items-center justify-center p-6 relative overflow-hidden ${GeistSans.className}`}>
+
+      {/* Background Decor */}
+      <div className="absolute top-0 left-0 w-full h-full overflow-hidden -z-10 pointer-events-none opacity-60">
+        <div className="absolute top-[-10%] left-[-10%] w-[60%] h-[60%] bg-blue-200/40 rounded-full blur-[120px]"></div>
+        <div className="absolute bottom-[-10%] right-[-10%] w-[60%] h-[60%] bg-pink-200/40 rounded-full blur-[120px]"></div>
+      </div>
+
+      <div className="max-w-md w-full z-10 flex flex-col items-center">
+
+        {/* Logo / Header */}
+        <div className="text-center mb-10 animate-in fade-in slide-in-from-bottom-8 duration-700">
+          <div className="inline-block px-4 py-1.5 rounded-full bg-white/50 border border-white/60 backdrop-blur-md shadow-sm mb-6">
+            <span className={`text-slate-500 font-bold text-sm ${GeistMono.className}`}>
+              {new Date().toLocaleDateString('th-TH', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+            </span>
+          </div>
+
+          <div className="w-24 h-24 bg-gradient-to-br from-[#e72289] to-[#c01b70] rounded-[2rem] flex items-center justify-center shadow-2xl shadow-pink-500/40 mx-auto mb-6 rotate-3 hover:rotate-6 transition-transform duration-500 overflow-hidden p-4">
+            <DynamicLogo fallbackIcon={<Ticket size={48} className="text-white" />} />
+          </div>
+          <h1 className="text-4xl font-black text-slate-900 tracking-tight mb-3">
+            ติดตามสถานะคิว
           </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
+          <p className="text-slate-500 font-medium text-lg">
+            กรอกหมายเลขคิวของคุณเพื่อตรวจสอบสถานะ
           </p>
+          <div className="mt-2 text-xs font-bold text-[#e72289] bg-pink-50 px-3 py-1 rounded-lg inline-block">
+            * แสดงผลเฉพาะคิวของวันนี้เท่านั้น
+          </div>
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
+
+        {/* Search Form */}
+        <form onSubmit={handleSearch} className="w-full animate-in fade-in slide-in-from-bottom-12 duration-1000 delay-100">
+          <div className="bg-white/60 backdrop-blur-2xl border border-white/60 rounded-[2.5rem] p-2 shadow-xl shadow-slate-200/50 focus-within:shadow-2xl focus-within:shadow-pink-500/20 focus-within:border-pink-200 transition-all duration-500">
+            <div className="relative flex items-center">
+              <div className="pl-6 text-slate-400">
+                <Search size={24} />
+              </div>
+              <input
+                type="text"
+                value={queueNumber}
+                onChange={(e) => setQueueNumber(e.target.value)}
+                placeholder="เช่น A001"
+                className={`w-full bg-transparent border-none px-4 py-6 text-2xl font-bold text-slate-800 placeholder:text-slate-300 focus:outline-none uppercase ${GeistMono.className}`}
+                autoFocus
+              />
+              <button
+                type="submit"
+                disabled={!queueNumber.trim()}
+                className="m-2 p-4 bg-[#e72289] hover:bg-[#c01b70] disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-[2rem] shadow-lg shadow-pink-500/30 transition-all duration-300 hover:scale-105 active:scale-95 flex items-center gap-2 font-bold pr-6"
+              >
+                <span className="hidden sm:inline">ค้นหา</span>
+                <ArrowRight size={24} />
+              </button>
+            </div>
+          </div>
+          <p className="text-center text-slate-400 text-sm mt-6 font-medium">
+            ระบบจะนำคุณไปยังหน้าติดตามสถานะโดยอัตโนมัติ
+          </p>
+        </form>
+
+      </div>
+
+      <Footer className="absolute bottom-6 text-slate-300 font-medium text-xs" />
     </div>
   );
 }

@@ -11,7 +11,9 @@ const pool = mysql.createPool({
   database: process.env.DB_NAME,
   waitForConnections: true,
   connectionLimit: 10,
-  queueLimit: 0
+  queueLimit: 0,
+  enableKeepAlive: true,
+  keepAliveInitialDelay: 0
 });
 
 // แปลงเป็น Promise เพื่อให้ใช้ Async/Await ได้ง่ายๆ

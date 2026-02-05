@@ -2,324 +2,439 @@
 
 import { useEffect, useState } from 'react';
 import { api } from '@/lib/api';
-import { 
-  Building2, Plus, Trash2, Edit2, Save, X, 
-  MapPin, ArrowRight, LayoutGrid, Monitor 
+import {
+    Building2, Plus, Trash2, Edit2, X,
+    MapPin, ArrowRight, LayoutGrid, Monitor, CheckCircle2
 } from 'lucide-react';
+import { GeistSans } from 'geist/font/sans';
+import { GeistMono } from 'geist/font/mono';
+import Portal from '@/components/Portal';
 
 interface Department {
-  id: number;
-  name: string;
-  code: string;
-  sort_order: number;
+    id: number;
+    name: string;
+    code: string;
+    sort_order: number;
+    status_message?: string;
 }
 
 interface Counter {
-  id: number;
-  name: string;
-  department_id: number;
+    id: number;
+    name: string;
+    department_id: number;
 }
 
 export default function DepartmentsPage() {
-  const [depts, setDepts] = useState<Department[]>([]);
-  const [counters, setCounters] = useState<Counter[]>([]);
-  const [selectedDept, setSelectedDept] = useState<Department | null>(null);
-  const [loading, setLoading] = useState(true);
+    const [depts, setDepts] = useState<Department[]>([]);
+    const [counters, setCounters] = useState<Counter[]>([]);
+    const [selectedDept, setSelectedDept] = useState<Department | null>(null);
+    const [loading, setLoading] = useState(true);
 
-  // Modal States
-  const [showDeptModal, setShowDeptModal] = useState(false);
-  const [showCounterModal, setShowCounterModal] = useState(false);
-  
-  // Form Data
-  const [deptForm, setDeptForm] = useState({ id: 0, name: '', code: '', sort_order: 0 });
-  const [counterForm, setCounterForm] = useState({ name: '' });
+    // Modal States
+    const [showDeptModal, setShowDeptModal] = useState(false);
+    const [showCounterModal, setShowCounterModal] = useState(false);
 
-  // 1. Initial Load
-  useEffect(() => { fetchDepartments(); }, []);
+    // Form Data
+    const [deptForm, setDeptForm] = useState<{ id: number; name: string; code: string; sort_order: number; status_message?: string }>({ id: 0, name: '', code: '', sort_order: 0, status_message: '' });
+    const [counterForm, setCounterForm] = useState({ id: 0, name: '' });
 
-  // 2. Fetch Departments
-  const fetchDepartments = async () => {
-    try {
-      setLoading(true);
-      const res = await api.get('/admin/departments');
-      setDepts(res.data);
-      // ถ้ามีเลือกฝ่ายอยู่แล้ว ให้รีโหลดฝ่ายนั้นด้วย (เผื่อชื่อเปลี่ยน)
-      if (selectedDept) {
-        const updated = res.data.find((d: Department) => d.id === selectedDept.id);
-        if (updated) setSelectedDept(updated);
-      }
-    } catch (err) { console.error(err); } 
-    finally { setLoading(false); }
-  };
+    // 1. Initial Load
+    useEffect(() => { fetchDepartments(); }, []);
 
-  // 3. Fetch Counters (เมื่อเลือกฝ่าย)
-  const fetchCounters = async (deptId: number) => {
-    try {
-      const res = await api.get(`/admin/counters?department_id=${deptId}`);
-      setCounters(res.data);
-    } catch (err) { console.error(err); }
-  };
+    // 2. Fetch Departments
+    const fetchDepartments = async () => {
+        try {
+            setLoading(true);
+            const res = await api.get('/admin/departments');
+            setDepts(res.data);
+            if (selectedDept) {
+                const updated = res.data.find((d: Department) => d.id === selectedDept.id);
+                if (updated) setSelectedDept(updated);
+                else setSelectedDept(null); // Clear if deleted
+            }
+        } catch (err) { console.error(err); }
+        finally { setLoading(false); }
+    };
 
-  // --- Handlers: Department ---
+    // 3. Fetch Counters
+    const fetchCounters = async (deptId: number) => {
+        try {
+            const res = await api.get(`/admin/counters?department_id=${deptId}`);
+            setCounters(res.data.filter((c: Counter) => c.department_id === deptId));
+        } catch (err) { console.error(err); }
+    };
 
-  const handleSelectDept = (dept: Department) => {
-    setSelectedDept(dept);
-    fetchCounters(dept.id);
-  };
+    // --- Handlers ---
 
-  const handleSaveDept = async (e: React.FormEvent) => {
-    e.preventDefault();
-    try {
-      if (deptForm.id) {
-        await api.put(`/admin/departments/${deptForm.id}`, deptForm);
-      } else {
-        await api.post('/admin/departments', deptForm);
-      }
-      setShowDeptModal(false);
-      fetchDepartments();
-    } catch (err) { alert('บันทึกไม่สำเร็จ'); }
-  };
+    const handleSelectDept = (dept: Department) => {
+        setSelectedDept(dept);
+        fetchCounters(dept.id);
+    };
 
-  const handleDeleteDept = async (id: number) => {
-    if (!confirm('คำเตือน: การลบฝ่ายงานจะทำให้ช่องบริการและคิวที่เกี่ยวข้องหายไป หรือเกิดข้อผิดพลาดได้\nยืนยันที่จะลบ?')) return;
-    try {
-      await api.delete(`/admin/departments/${id}`);
-      setSelectedDept(null);
-      setCounters([]);
-      fetchDepartments();
-    } catch (err) { alert('ลบไม่สำเร็จ (อาจมีข้อมูลคิวค้างอยู่)'); }
-  };
+    const handleSaveDept = async (e: React.FormEvent) => {
+        e.preventDefault();
+        try {
+            if (deptForm.id) {
+                await api.put(`/admin/departments/${deptForm.id}`, deptForm);
+            } else {
+                await api.post('/admin/departments', deptForm);
+            }
+            setShowDeptModal(false);
+            fetchDepartments();
+        } catch (err) { alert('บันทึกไม่สำเร็จ'); }
+    };
 
-  // --- Handlers: Counter ---
+    const handleDeleteDept = async (id: number) => {
+        if (!confirm('คำเตือน: การลบฝ่ายงานจะทำให้ช่องบริการและคิวที่เกี่ยวข้องหายไป\nยืนยันที่จะลบ?')) return;
+        try {
+            await api.delete(`/admin/departments/${id}`);
+            setSelectedDept(null);
+            setCounters([]);
+            fetchDepartments();
+        } catch (err) { alert('ลบไม่สำเร็จ'); }
+    };
 
-  const handleSaveCounter = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!selectedDept) return;
-    try {
-      await api.post('/admin/counters', { ...counterForm, department_id: selectedDept.id });
-      setShowCounterModal(false);
-      setCounterForm({ name: '' });
-      fetchCounters(selectedDept.id);
-    } catch (err) { alert('บันทึกไม่สำเร็จ'); }
-  };
+    const handleSaveCounter = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!selectedDept) return;
+        try {
+            if (counterForm.id) {
+                await api.put(`/admin/counters/${counterForm.id}`, { ...counterForm, department_id: selectedDept.id });
+            } else {
+                await api.post('/admin/counters', { ...counterForm, department_id: selectedDept.id });
+            }
+            setShowCounterModal(false);
+            setCounterForm({ id: 0, name: '' });
+            fetchCounters(selectedDept.id);
+        } catch (err) { alert('บันทึกไม่สำเร็จ'); }
+    };
 
-  const handleDeleteCounter = async (id: number) => {
-    if (!confirm('ลบช่องบริการนี้?')) return;
-    if (!selectedDept) return;
-    try {
-      await api.delete(`/admin/counters/${id}`);
-      fetchCounters(selectedDept.id);
-    } catch (err) { alert('ลบไม่สำเร็จ'); }
-  };
+    const handleDeleteCounter = async (id: number) => {
+        if (!confirm('ลบช่องบริการนี้?')) return;
+        if (!selectedDept) return;
+        try {
+            await api.delete(`/admin/counters/${id}`);
+            fetchCounters(selectedDept.id);
+        } catch (err) { alert('ลบไม่สำเร็จ'); }
+    };
 
-  // --- UI Components ---
+    const handleSortOrderChange = async (dept: Department, newOrder: string) => {
+        const order = parseInt(newOrder);
+        if (isNaN(order) || order === dept.sort_order) return;
 
-  return (
-    <div className="min-h-screen p-8 font-sans text-slate-900 bg-[#F5F7FA]">
-      <div className="max-w-7xl mx-auto space-y-6">
-        
-        {/* Header */}
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
-          <div>
-            <h1 className="text-3xl font-semibold tracking-tight text-slate-900">โครงสร้างองค์กร</h1>
-            <p className="text-slate-500 mt-1">จัดการฝ่ายงาน (Departments) และช่องบริการ (Counters)</p>
-          </div>
-        </div>
+        try {
+            await api.put(`/admin/departments/${dept.id}`, { ...dept, sort_order: order });
+            fetchDepartments(); // Refetch to show swapped items
+        } catch (err) {
+            console.error('Update sort order failed', err);
+            alert('Failed to update order');
+        }
+    };
 
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 h-[calc(100vh-200px)]">
-          
-          {/* ================= LEFT: DEPARTMENTS LIST (4 Columns) ================= */}
-          <div className="lg:col-span-4 flex flex-col gap-4">
-            <div className="flex justify-between items-center px-1">
-              <h2 className="text-lg font-bold text-slate-700 flex items-center gap-2">
-                <Building2 className="text-blue-600" size={20} /> ฝ่ายงานทั้งหมด
-              </h2>
-              <button 
-                onClick={() => { setDeptForm({ id: 0, name: '', code: '', sort_order: 0 }); setShowDeptModal(true); }}
-                className="text-sm bg-white border border-slate-300 hover:border-blue-500 hover:text-blue-600 px-3 py-1.5 rounded-lg shadow-sm transition-all"
-              >
-                + เพิ่มฝ่าย
-              </button>
-            </div>
+    return (
+        <div className={`space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700 h-[calc(100vh-100px)] flex flex-col ${GeistSans.className}`}>
 
-            <div className="flex-1 overflow-y-auto space-y-3 pr-2 custom-scrollbar">
-              {loading ? (
-                [1,2,3].map(i => <div key={i} className="h-16 bg-white rounded-xl animate-pulse" />)
-              ) : depts.map((d) => (
-                <div 
-                  key={d.id}
-                  onClick={() => handleSelectDept(d)}
-                  className={`group relative p-4 rounded-xl border cursor-pointer transition-all duration-200 hover:shadow-md
-                    ${selectedDept?.id === d.id 
-                      ? 'bg-blue-600 border-blue-600 text-white shadow-lg shadow-blue-200 ring-2 ring-blue-100' 
-                      : 'bg-white border-slate-200 text-slate-800 hover:border-blue-300'
-                    }`}
-                >
-                  <div className="flex justify-between items-start">
+            {/* Header */}
+            {/* Header */}
+            <div className="flex flex-col md:flex-row md:items-center justify-between mb-6 gap-4 flex-none">
+                <div className="flex items-center gap-4">
+                    <div className="w-12 h-12 bg-gradient-to-br from-pink-500 to-rose-500 rounded-2xl flex items-center justify-center shadow-lg shrink-0">
+                        <Building2 className="w-6 h-6 text-white" />
+                    </div>
                     <div>
-                      <h3 className="font-bold text-lg leading-tight">{d.name}</h3>
-                      <div className={`text-xs mt-1 font-mono inline-block px-1.5 py-0.5 rounded ${selectedDept?.id === d.id ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-500'}`}>
-                        CODE: {d.code}
-                      </div>
+                        <h1 className="text-xl md:text-2xl font-bold text-slate-800">แผนกและจุดบริการ</h1>
+                        <p className="text-sm text-slate-500">จัดการโครงสร้างฝ่ายงานและจุดให้บริการ (Counters)</p>
                     </div>
-                    {selectedDept?.id === d.id && <ArrowRight size={20} className="animate-pulse" />}
-                  </div>
-
-                  {/* Actions (Edit/Delete) */}
-                  <div className={`absolute top-2 right-2 flex gap-1 ${selectedDept?.id === d.id ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'} transition-opacity`}>
-                    <button 
-                      onClick={(e) => { e.stopPropagation(); setDeptForm(d); setShowDeptModal(true); }}
-                      className={`p-1.5 rounded-md transition-colors ${selectedDept?.id === d.id ? 'text-white hover:bg-white/20' : 'text-slate-400 hover:text-blue-600 hover:bg-blue-50'}`}
-                    >
-                      <Edit2 size={14} />
-                    </button>
-                    {/* ไม่ให้ลบฝ่ายที่เลือกอยู่เพื่อกันงง */}
-                    {selectedDept?.id !== d.id && (
-                      <button 
-                        onClick={(e) => { e.stopPropagation(); handleDeleteDept(d.id); }}
-                        className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-md transition-colors"
-                      >
-                        <Trash2 size={14} />
-                      </button>
-                    )}
-                  </div>
                 </div>
-              ))}
             </div>
-          </div>
 
-          {/* ================= RIGHT: COUNTERS LIST (8 Columns) ================= */}
-          <div className="lg:col-span-8 bg-white border border-slate-200 rounded-2xl shadow-sm flex flex-col overflow-hidden">
-            {selectedDept ? (
-              <>
-                <div className="p-6 border-b border-slate-100 bg-slate-50/50 flex justify-between items-center">
-                  <div>
-                    <h2 className="text-xl font-bold text-slate-800 flex items-center gap-2">
-                      <MapPin className="text-blue-600" /> 
-                      ช่องบริการใน "{selectedDept.name}"
-                    </h2>
-                    <p className="text-sm text-slate-500 mt-1">จัดการจุดให้บริการภายในฝ่ายงานนี้</p>
-                  </div>
-                  <button 
-                    onClick={() => { setCounterForm({ name: '' }); setShowCounterModal(true); }}
-                    className="flex items-center gap-2 bg-[#0078D4] hover:bg-[#006cbd] text-white px-4 py-2 rounded-lg font-medium shadow-sm transition-all active:scale-95"
-                  >
-                    <Plus size={18} /> เพิ่มช่องบริการ
-                  </button>
-                </div>
+            <div className="flex-1 grid grid-cols-1 lg:grid-cols-12 gap-8 min-h-0">
 
-                <div className="p-6 flex-1 overflow-y-auto bg-[#FAFAFA]">
-                  {counters.length === 0 ? (
-                    <div className="h-full flex flex-col items-center justify-center text-slate-400">
-                      <Monitor size={48} className="mb-4 opacity-20" />
-                      <p>ยังไม่มีช่องบริการในฝ่ายนี้</p>
-                      <button onClick={() => setShowCounterModal(true)} className="mt-2 text-blue-600 hover:underline text-sm">
-                        + เพิ่มช่องแรกเลย
-                      </button>
+                {/* ================= LEFT: DEPARTMENTS LIST ================= */}
+                <div className="lg:col-span-4 flex flex-col gap-4 min-h-0">
+                    <div className="flex justify-between items-center px-1 flex-none">
+                        <h2 className="text-sm font-bold text-slate-500 uppercase tracking-wider flex items-center gap-2">
+                            <Building2 size={16} /> รายชื่อแผนก
+                        </h2>
+                        <button
+                            onClick={() => { setDeptForm({ id: 0, name: '', code: '', sort_order: 0, status_message: '' }); setShowDeptModal(true); }}
+                            className="text-xs font-bold bg-gradient-to-r from-pink-500 to-rose-500 text-white px-4 py-2 rounded-xl shadow-lg shadow-pink-500/20 hover:shadow-pink-500/40 transition-all flex items-center gap-1.5"
+                        >
+                            <Plus size={16} /> เพิ่มแผนก
+                        </button>
                     </div>
-                  ) : (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                      {counters.map((c) => (
-                        <div key={c.id} className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex justify-between items-center group hover:border-blue-400 hover:shadow-md transition-all">
-                          <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center font-bold">
-                              {c.name.replace(/\D/g, '') || '#'}
+
+                    <div className="flex-1 overflow-y-auto pr-2 custom-scrollbar pb-4 space-y-3">
+                        {loading ? (
+                            <div className="space-y-3">
+                                {[1, 2, 3].map(i => <div key={i} className="h-20 bg-white/50 rounded-2xl animate-pulse border border-slate-100" />)}
                             </div>
-                            <span className="font-semibold text-slate-700">{c.name}</span>
-                          </div>
-                          <button 
-                            onClick={() => handleDeleteCounter(c.id)}
-                            className="p-2 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-lg opacity-0 group-hover:opacity-100 transition-all"
-                          >
-                            <Trash2 size={16} />
-                          </button>
-                        </div>
-                      ))}
+                        ) : (
+                            depts.map((d) => (
+                                <div
+                                    key={d.id}
+                                    onClick={() => handleSelectDept(d)}
+                                    className={`group relative p-4 rounded-2xl border cursor-pointer transition-all duration-300
+                    ${selectedDept?.id === d.id
+                                            ? 'bg-[#e72289] border-[#e72289] text-white shadow-xl shadow-pink-500/30 ring-2 ring-pink-100 scale-[1.02]'
+                                            : 'bg-white/80 backdrop-blur-xl border-white/60 text-slate-800 hover:border-pink-200 hover:shadow-lg'
+                                        }`}
+                                >
+                                    <div className="flex items-center gap-3">
+                                        {/* Manual Sort Order Input */}
+                                        <div onClick={(e) => e.stopPropagation()} className="relative group/input">
+                                            <div className="absolute -top-2 -right-2 bg-black/80 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full opacity-0 group-hover/input:opacity-100 transition-opacity z-20 pointer-events-none">
+                                                ORDER
+                                            </div>
+                                            <input
+                                                type="number"
+                                                min="1"
+                                                defaultValue={d.sort_order}
+                                                onBlur={(e) => {
+                                                    const val = parseInt(e.target.value);
+                                                    if (val < 1) {
+                                                        e.target.value = d.sort_order.toString();
+                                                        return;
+                                                    }
+                                                    handleSortOrderChange(d, e.target.value);
+                                                }}
+                                                onKeyDown={(e) => {
+                                                    if (e.key === 'Enter') {
+                                                        e.currentTarget.blur();
+                                                    }
+                                                }}
+                                                className={`w-10 h-10 text-center font-black text-lg rounded-xl border-2 transition-all outline-none shadow-sm ${GeistMono.className}
+                          ${selectedDept?.id === d.id
+                                                        ? 'bg-white/20 border-white/40 text-white placeholder-white/50 focus:bg-white focus:text-[#e72289]'
+                                                        : 'bg-white border-slate-200 text-slate-700 focus:border-[#e72289] focus:ring-4 focus:ring-pink-500/10'
+                                                    }`}
+                                            />
+                                        </div>
+
+                                        <div className="flex-1">
+                                            <h3 className="font-bold text-lg leading-tight mb-1">{d.name}</h3>
+                                            <div className={`text-[10px] font-bold inline-block px-2 py-0.5 rounded-md ${GeistMono.className} ${selectedDept?.id === d.id ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-500'}`}>
+                                                CODE: {d.code}
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {/* Actions */}
+                                    <div className={`absolute top-3 right-3 flex gap-1 ${selectedDept?.id === d.id ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'} transition-all`}>
+                                        <button
+                                            onClick={(e) => { e.stopPropagation(); setDeptForm(d); setShowDeptModal(true); }}
+                                            className={`p-1.5 rounded-lg transition-colors ${selectedDept?.id === d.id ? 'text-white hover:bg-white/20' : 'text-slate-400 hover:text-[#e72289] hover:bg-pink-50'}`}
+                                        >
+                                            <Edit2 size={14} />
+                                        </button>
+                                        {selectedDept?.id !== d.id && (
+                                            <button
+                                                onClick={(e) => { e.stopPropagation(); handleDeleteDept(d.id); }}
+                                                className="p-1.5 text-slate-400 hover:text-rose-500 hover:bg-rose-50 rounded-lg transition-colors"
+                                            >
+                                                <Trash2 size={14} />
+                                            </button>
+                                        )}
+                                    </div>
+                                </div>
+                            ))
+                        )}
                     </div>
-                  )}
                 </div>
-              </>
-            ) : (
-              // Empty State (No Dept Selected)
-              <div className="flex-1 flex flex-col items-center justify-center text-slate-400">
-                <LayoutGrid size={64} className="mb-6 opacity-10" />
-                <p className="text-lg">กรุณาเลือก "ฝ่ายงาน" ทางด้านซ้าย</p>
-                <p className="text-sm">เพื่อจัดการช่องบริการภายใน</p>
-              </div>
+
+                {/* ================= RIGHT: COUNTERS LIST ================= */}
+                <div className="lg:col-span-8 bg-white/80 backdrop-blur-xl rounded-[2rem] border border-white/60 shadow-sm flex flex-col min-h-0 overflow-hidden">
+                    {selectedDept ? (
+                        <>
+                            <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-white/40">
+                                <div>
+                                    <h2 className="text-xl font-black text-slate-900 flex items-center gap-2">
+                                        <Monitor className="text-[#e72289]" />
+                                        {selectedDept.name}
+                                    </h2>
+                                    <p className="text-slate-500 text-sm font-medium">จัดการจุดให้บริการ (Counters) ภายในแผนกนี้</p>
+                                </div>
+                                <button
+                                    onClick={() => { setCounterForm({ id: 0, name: '' }); setShowCounterModal(true); }}
+                                    className="bg-[#e72289] hover:bg-[#c01b70] text-white px-4 py-2 rounded-xl font-bold shadow-lg shadow-pink-500/30 transition-all active:scale-95 flex items-center gap-2"
+                                >
+                                    <Plus size={18} /> เพิ่มจุดบริการ
+                                </button>
+                            </div>
+
+                            <div className="flex-1 p-6 overflow-y-auto custom-scrollbar">
+                                {counters.length === 0 ? (
+                                    <div className="h-full flex flex-col items-center justify-center text-slate-400 opacity-60">
+                                        <LayoutGrid size={48} className="mb-4" />
+                                        <p className="font-medium">ยังไม่มีจุดบริการในแผนกนี้</p>
+                                    </div>
+                                ) : (
+                                    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+                                        {counters.map((c) => (
+                                            <div key={c.id} className="group bg-white/60 border border-slate-200 p-4 rounded-2xl hover:border-pink-300 hover:shadow-md transition-all relative">
+                                                <div className="flex justify-between items-start mb-2">
+                                                    <div className={`w-10 h-10 bg-pink-50 text-[#e72289] rounded-xl flex items-center justify-center font-black text-lg ${GeistMono.className}`}>
+                                                        {c.id}
+                                                    </div>
+                                                    <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                        <button
+                                                            onClick={() => { setCounterForm(c); setShowCounterModal(true); }}
+                                                            className="p-1.5 text-slate-400 hover:text-[#e72289] hover:bg-pink-50 rounded-lg"
+                                                        >
+                                                            <Edit2 size={14} />
+                                                        </button>
+                                                        <button
+                                                            onClick={() => handleDeleteCounter(c.id)}
+                                                            className="p-1.5 text-slate-400 hover:text-rose-500 hover:bg-rose-50 rounded-lg"
+                                                        >
+                                                            <Trash2 size={14} />
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                                <h3 className="font-bold text-slate-900 text-lg">{c.name}</h3>
+                                                <div className={`text-xs text-slate-400 mt-1 font-bold ${GeistMono.className}`}>ID: {c.id}</div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+                        </>
+                    ) : (
+                        <div className="flex-1 flex flex-col items-center justify-center text-slate-400">
+                            <div className="w-20 h-20 bg-slate-100 rounded-full flex items-center justify-center mb-4 animate-pulse">
+                                <ArrowRight size={32} className="text-slate-300" />
+                            </div>
+                            <p className="font-medium">กรุณาเลือกแผนกทางด้านซ้าย</p>
+                            <p className="text-sm opacity-60">เพื่อจัดการจุดให้บริการ</p>
+                        </div>
+                    )}
+                </div>
+
+            </div>
+
+            {/* ================= MODAL: DEPARTMENT ================= */}
+            {showDeptModal && (
+                <Portal>
+                    <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-md z-[100] flex items-center justify-center p-4 animate-in fade-in duration-300">
+                        <div className="bg-white/90 backdrop-blur-2xl rounded-[2rem] shadow-2xl w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-300 border border-white/50">
+                            <div className="p-8 border-b border-slate-100 flex justify-between items-center bg-white/50">
+                                <h3 className="text-2xl font-black text-slate-900 flex items-center gap-3">
+                                    <div className="p-2 bg-pink-100 text-[#e72289] rounded-xl">
+                                        {deptForm.id ? <Edit2 size={24} /> : <Plus size={24} />}
+                                    </div>
+                                    {deptForm.id ? 'แก้ไขแผนก' : 'เพิ่มแผนกใหม่'}
+                                </h3>
+                                <button onClick={() => setShowDeptModal(false)} className="p-2 hover:bg-black/5 rounded-full text-slate-400 hover:text-slate-600 transition-colors">
+                                    <X size={24} />
+                                </button>
+                            </div>
+                            <form onSubmit={handleSaveDept} className="p-8 space-y-6">
+                                <div>
+                                    <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2 ml-1">ชื่อแผนก</label>
+                                    <input
+                                        type="text"
+                                        required
+                                        className="w-full px-4 py-3 bg-white/50 border border-slate-200 rounded-2xl focus:outline-none focus:ring-4 focus:ring-pink-500/10 focus:border-[#e72289] transition-all font-medium"
+                                        placeholder="เช่น ฝ่ายทะเบียน, ฝ่ายการเงิน"
+                                        value={deptForm.name}
+                                        onChange={(e) => setDeptForm({ ...deptForm, name: e.target.value })}
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2 ml-1">รหัสแผนก (Code)</label>
+                                    <input
+                                        type="text"
+                                        required
+                                        className={`w-full px-4 py-3 bg-white/50 border border-slate-200 rounded-2xl focus:outline-none focus:ring-4 focus:ring-pink-500/10 focus:border-[#e72289] uppercase transition-all font-bold ${GeistMono.className}`}
+                                        placeholder="เช่น REG, FIN"
+                                        value={deptForm.code}
+                                        onChange={(e) => setDeptForm({ ...deptForm, code: e.target.value.toUpperCase() })}
+                                    />
+                                </div>
+
+                                {/* Status Message Input */}
+                                <div>
+                                    <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2 ml-1">ข้อความสถานะ (Optional)</label>
+                                    <input
+                                        type="text"
+                                        className="w-full px-4 py-3 bg-white/50 border border-slate-200 rounded-2xl focus:outline-none focus:ring-4 focus:ring-pink-500/10 focus:border-[#e72289] transition-all font-medium"
+                                        placeholder="เช่น รอเรียกคิวที่ห้องการเงิน"
+                                        value={deptForm.status_message || ''}
+                                        onChange={(e) => setDeptForm({ ...deptForm, status_message: e.target.value })}
+                                    />
+                                    <p className="text-[10px] text-slate-400 mt-1 ml-1 font-medium">* ข้อความนี้จะแสดงในหน้าติดตามสถานะแทนคำว่า "รอเรียกคิว"</p>
+                                </div>
+
+                                <div className="pt-4 flex gap-4">
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowDeptModal(false)}
+                                        className="flex-1 py-3.5 rounded-2xl border border-slate-200 text-slate-600 font-bold hover:bg-slate-50 transition-all"
+                                    >
+                                        ยกเลิก
+                                    </button>
+                                    <button
+                                        type="submit"
+                                        className="flex-1 py-3.5 bg-[#e72289] hover:bg-[#c01b70] text-white font-bold rounded-2xl shadow-lg shadow-pink-500/30 transition-all transform active:scale-[0.98]"
+                                    >
+                                        บันทึก
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </Portal>
             )}
-          </div>
+
+            {/* ================= MODAL: COUNTER ================= */}
+            {showCounterModal && (
+                <Portal>
+                    <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-md z-[100] flex items-center justify-center p-4 animate-in fade-in duration-300">
+                        <div className="bg-white/90 backdrop-blur-2xl rounded-[2rem] shadow-2xl w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-300 border border-white/50">
+                            <div className="p-8 border-b border-slate-100 flex justify-between items-center bg-white/50">
+                                <h3 className="text-2xl font-black text-slate-900 flex items-center gap-3">
+                                    <div className="p-2 bg-pink-100 text-[#e72289] rounded-xl">
+                                        {counterForm.id ? <Edit2 size={24} /> : <Plus size={24} />}
+                                    </div>
+                                    {counterForm.id ? 'แก้ไขจุดบริการ' : 'เพิ่มจุดบริการใหม่'}
+                                </h3>
+                                <button onClick={() => setShowCounterModal(false)} className="p-2 hover:bg-black/5 rounded-full text-slate-400 hover:text-slate-600 transition-colors">
+                                    <X size={24} />
+                                </button>
+                            </div>
+                            <form onSubmit={handleSaveCounter} className="p-8 space-y-6">
+                                <div>
+                                    <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2 ml-1">ชื่อจุดบริการ / ช่องบริการ</label>
+                                    <input
+                                        type="text"
+                                        required
+                                        className="w-full px-4 py-3 bg-white/50 border border-slate-200 rounded-2xl focus:outline-none focus:ring-4 focus:ring-pink-500/10 focus:border-[#e72289] transition-all font-medium"
+                                        placeholder="เช่น ช่อง 1, โต๊ะ 5"
+                                        value={counterForm.name}
+                                        onChange={(e) => setCounterForm({ ...counterForm, name: e.target.value })}
+                                    />
+                                </div>
+                                <div className="pt-4 flex gap-4">
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowCounterModal(false)}
+                                        className="flex-1 py-3.5 rounded-2xl border border-slate-200 text-slate-600 font-bold hover:bg-slate-50 transition-all"
+                                    >
+                                        ยกเลิก
+                                    </button>
+                                    <button
+                                        type="submit"
+                                        className="flex-1 py-3.5 bg-[#e72289] hover:bg-[#c01b70] text-white font-bold rounded-2xl shadow-lg shadow-pink-500/30 transition-all transform active:scale-[0.98]"
+                                    >
+                                        บันทึก
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </Portal>
+            )}
 
         </div>
-      </div>
-
-      {/* --- Modal: Add/Edit Department --- */}
-      {showDeptModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm animate-in fade-in">
-          <div className="bg-white w-full max-w-sm rounded-2xl shadow-2xl p-6 animate-in zoom-in-95">
-            <h2 className="text-xl font-bold mb-4">{deptForm.id ? 'แก้ไขฝ่ายงาน' : 'เพิ่มฝ่ายงานใหม่'}</h2>
-            <form onSubmit={handleSaveDept} className="space-y-4">
-              <div>
-                <label className="text-sm font-medium text-slate-700">ชื่อฝ่ายงาน</label>
-                <input required type="text" className="input-field" placeholder="เช่น การเงิน"
-                  value={deptForm.name} onChange={e => setDeptForm({...deptForm, name: e.target.value})} autoFocus />
-              </div>
-              <div className="flex gap-4">
-                <div className="flex-1">
-                  <label className="text-sm font-medium text-slate-700">รหัสย่อ (Code)</label>
-                  <input required type="text" className="input-field uppercase" placeholder="FIN"
-                    value={deptForm.code} onChange={e => setDeptForm({...deptForm, code: e.target.value.toUpperCase()})} />
-                </div>
-                <div className="w-1/3">
-                  <label className="text-sm font-medium text-slate-700">ลำดับ</label>
-                  <input type="number" className="input-field"
-                    value={deptForm.sort_order} onChange={e => setDeptForm({...deptForm, sort_order: parseInt(e.target.value)})} />
-                </div>
-              </div>
-              <div className="flex gap-2 pt-2">
-                <button type="button" onClick={() => setShowDeptModal(false)} className="btn-secondary flex-1">ยกเลิก</button>
-                <button type="submit" className="btn-primary flex-1">บันทึก</button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* --- Modal: Add Counter --- */}
-      {showCounterModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm animate-in fade-in">
-          <div className="bg-white w-full max-w-sm rounded-2xl shadow-2xl p-6 animate-in zoom-in-95">
-            <h2 className="text-xl font-bold mb-4">เพิ่มช่องบริการ</h2>
-            <p className="text-sm text-slate-500 mb-4">ในฝ่าย: <span className="font-bold text-blue-600">{selectedDept?.name}</span></p>
-            <form onSubmit={handleSaveCounter} className="space-y-4">
-              <div>
-                <label className="text-sm font-medium text-slate-700">ชื่อช่องบริการ</label>
-                <input required type="text" className="input-field" placeholder="เช่น ช่อง 10"
-                  value={counterForm.name} onChange={e => setCounterForm({...counterForm, name: e.target.value})} autoFocus />
-              </div>
-              <div className="flex gap-2 pt-2">
-                <button type="button" onClick={() => setShowCounterModal(false)} className="btn-secondary flex-1">ยกเลิก</button>
-                <button type="submit" className="btn-primary flex-1">เพิ่มเลย</button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      <style jsx>{`
-        .input-field {
-          @apply w-full px-4 py-2 mt-1 bg-white border border-slate-300 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none transition-all;
-        }
-        .btn-primary {
-          @apply py-2.5 rounded-lg bg-[#0078D4] hover:bg-[#006cbd] text-white font-medium shadow-sm transition-all;
-        }
-        .btn-secondary {
-          @apply py-2.5 rounded-lg border border-slate-200 text-slate-700 font-medium hover:bg-slate-50 transition-all;
-        }
-        /* Custom Scrollbar for list */
-        .custom-scrollbar::-webkit-scrollbar { width: 6px; }
-        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
-        .custom-scrollbar::-webkit-scrollbar-thumb { background-color: #cbd5e1; border-radius: 20px; }
-      `}</style>
-    </div>
-  );
+    );
 }

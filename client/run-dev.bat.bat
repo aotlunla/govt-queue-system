@@ -2,7 +2,7 @@
 echo Starting Govt Queue System...
 
 :: เข้าไปที่ path ของโปรเจค (แก้ path ให้ตรงกับเครื่องคุณ)
-cd /d "C:\Users\frontnonthaburi\govt-queue-system\client"
+cd /d "D:\govt-queue-system\client"
 
 :: รันคำสั่ง
 npm run dev
