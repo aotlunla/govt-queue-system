@@ -273,38 +273,19 @@ export default function SettingsPage() {
                     </div>
 
                     <div className="space-y-6 mt-6">
-                        <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2 ml-1">โลโก้หน่วยงาน</label>
+                        <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2 ml-1">โลโก้หน่วยงาน (URL)</label>
                         <div className="relative group/input">
                             <Image className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within/input:text-emerald-600 transition-colors" size={20} />
                             <input
-                                type="file"
-                                accept="image/*"
-                                className="w-full pl-12 pr-4 py-3 bg-white/50 border border-slate-200 rounded-2xl focus:outline-none focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 transition-all font-medium text-slate-800 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-emerald-50 file:text-emerald-700 hover:file:bg-emerald-100"
-                                onChange={async (e) => {
-                                    const file = e.target.files?.[0];
-                                    if (file) {
-                                        const formData = new FormData();
-                                        formData.append('logo', file);
-                                        try {
-                                            setLoading(true);
-                                            const res = await api.post('/upload/logo', formData, {
-                                                headers: { 'Content-Type': 'multipart/form-data' }
-                                            });
-                                            if (res.data.url) {
-                                                setLogoUrl(res.data.url);
-                                            }
-                                        } catch (err) {
-                                            console.error('Upload failed', err);
-                                            alert('อัพโหลดรูปภาพไม่สำเร็จ');
-                                        } finally {
-                                            setLoading(false);
-                                        }
-                                    }
-                                }}
+                                type="url"
+                                className="w-full pl-12 pr-4 py-3 bg-white/50 border border-slate-200 rounded-2xl focus:outline-none focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 transition-all font-medium text-slate-800"
+                                value={logoUrl}
+                                onChange={(e) => setLogoUrl(e.target.value)}
+                                placeholder="https://example.com/logo.png"
                             />
                         </div>
                         <p className="text-xs text-slate-400 font-medium mt-2">
-                            * แนะนำขนาด 512x512 px (สี่เหลี่ยมจัตุรัส) เพื่อการแสดงผลที่สวยงาม
+                            * ใส่ URL ของรูปภาพโลโก้ (แนะนำขนาด 512x512 px) สามารถใช้ลิงก์จาก Google Drive, Imgur หรือเว็บฝากรูปอื่นๆ
                         </p>
                         {logoUrl && (
                             <div className="mt-4 flex items-center gap-4 animate-in fade-in zoom-in duration-300">
@@ -313,7 +294,6 @@ export default function SettingsPage() {
                                         backgroundImage: 'radial-gradient(#000 1px, transparent 1px)',
                                         backgroundSize: '10px 10px'
                                     }}></div>
-                                    <div className="absolute inset-0 bg-[url('https://transparent-textures.patterns.s3.amazonaws.com/subtle-grey.png')] opacity-20"></div>
                                     <img
                                         src={logoUrl}
                                         alt="Logo Preview"

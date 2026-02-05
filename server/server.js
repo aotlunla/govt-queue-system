@@ -100,13 +100,7 @@ app.use('/api/admin', adminRoutes);
 // 3. API ระบบ Auth (Login, Profile)
 app.use('/api/auth', authRoutes);
 
-// 4. API Upload
-const uploadRoutes = require('./routes/uploadRoutes');
-app.use('/api/upload', uploadRoutes);
-
-// Serve Uploads Static Directory
-const path = require('path');
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+// 4. Upload routes removed - Logo now uses URL instead of file upload
 
 // =======================
 // Socket Connection Event

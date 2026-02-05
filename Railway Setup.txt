@@ -10,6 +10,9 @@ KZNdGLyqnHPVLIUTRxECYKUSZFQCtrnL
 MYSQL_URL
 mysql://root:KZNdGLyqnHPVLIUTRxECYKUSZFQCtrnL@mysql.railway.internal:3306/railway
 
+----------------------------------------------------
+
+
 MYSQLDATABASE
 railway
 
@@ -24,3 +27,7 @@ MYSQLPORT
 
 MYSQLUSER
 root
+
+
+Public Networking
+govt-queue-system-production.up.railway.app
