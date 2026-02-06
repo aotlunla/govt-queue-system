@@ -1,6 +1,8 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
+import html2canvas from 'html2canvas';
+import { jsPDF } from 'jspdf';
 import { api } from '@/lib/api';
 import { RefreshCcw, Ticket, Loader2, ChevronLeft, User } from 'lucide-react';
 import { QueueTicketPrint } from '@/components/QueueTicketPrint';
@@ -34,6 +36,30 @@ const defaultKioskSettings: KioskSettings = {
   grid_gap: 'medium'
 };
 
+// ฟังก์ชันสำหรับส่งคำสั่งปริ้นแบบเงียบ
+async function sendToSilentPrint(base64String: string) {
+  try {
+    const response = await fetch('http://localhost:3003/print', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        base64Pdf: base64String // ส่งไฟล์ PDF ในรูปแบบ Base64
+      })
+    });
+
+    const result = await response.json();
+    if (result.status === "Success") {
+      console.log("ปริ้นสำเร็จ!");
+    } else {
+      console.error("เกิดข้อผิดพลาด:", result.message);
+    }
+  } catch (error) {
+    console.error("เชื่อมต่อ Print Server ไม่ได้:", error);
+  }
+}
+
 export default function KioskPage() {
   const [types, setTypes] = useState<QueueType[]>([]);
   const [roles, setRoles] = useState<CaseRole[]>([]);
@@ -54,6 +80,9 @@ export default function KioskPage() {
 
   // Kiosk Settings
   const [kioskSettings, setKioskSettings] = useState<KioskSettings>(defaultKioskSettings);
+
+  // Print Component Ref
+  const printRef = useRef<HTMLDivElement>(null);
 
   const fetchConfig = async () => {
     try {
@@ -111,6 +140,83 @@ export default function KioskPage() {
     };
   }, []);
 
+  const handleSilentPrint = async () => {
+    if (!printRef.current) {
+      console.error("Print ref not found");
+      return;
+    }
+
+    try {
+      // Wait a bit for DOM to settle
+      await new Promise(resolve => setTimeout(resolve, 500));
+
+      // Find the two slips
+      const slips = printRef.current.querySelectorAll('.ticket-slip');
+      if (slips.length < 2) {
+        console.error("Could not find both ticket slips");
+        alert("เกิดข้อผิดพลาดในการจับภาพบัตรคิว");
+        setPrintStep('idle');
+        setLoading(false);
+        return;
+      }
+
+      // Defined output width (mm) - slightly less than 80mm to safe margin
+      const contentWidth = 72;
+      const xOffset = (80 - contentWidth) / 2; // = 4mm margin
+
+      // Capture Slip 1 (Visitor) first to get dimensions
+      const canvas1 = await html2canvas(slips[0] as HTMLElement, {
+        scale: 2,
+        useCORS: true,
+        logging: false,
+        backgroundColor: '#ffffff',
+        windowWidth: 378
+      });
+      const imgData1 = canvas1.toDataURL('image/png');
+      const calcHeight1 = (canvas1.height * contentWidth) / canvas1.width;
+      const pdfHeight1 = Math.max(calcHeight1, 80); // Min height 80mm to prevent rotation
+
+      // Initialize PDF with the exact height of the first page + small padding if needed
+      const pdf = new jsPDF({
+        orientation: 'p',
+        unit: 'mm',
+        format: [80, pdfHeight1]
+      });
+
+      pdf.addImage(imgData1, 'PNG', xOffset, 0, contentWidth, calcHeight1);
+
+      // Capture Slip 2 (Officer)
+      const canvas2 = await html2canvas(slips[1] as HTMLElement, {
+        scale: 2,
+        useCORS: true,
+        logging: false,
+        backgroundColor: '#ffffff',
+        windowWidth: 378
+      });
+      const imgData2 = canvas2.toDataURL('image/png');
+      const calcHeight2 = (canvas2.height * contentWidth) / canvas2.width;
+      const pdfHeight2 = Math.max(calcHeight2, 80); // Min height 80mm to prevent rotation
+
+      pdf.addPage([80, pdfHeight2], 'p');
+      pdf.addImage(imgData2, 'PNG', xOffset, 0, contentWidth, calcHeight2);
+
+      const base64Pdf = pdf.output('datauristring').split(',')[1];
+
+      await sendToSilentPrint(base64Pdf);
+      setPrintStep('success');
+
+      setTimeout(() => {
+        resetFlow();
+      }, 3000);
+
+    } catch (err) {
+      console.error("Silent print generation failed:", err);
+      alert("การพิมพ์ล้มเหลว");
+      setPrintStep('idle');
+      setLoading(false);
+    }
+  };
+
   const handleCreateQueue = async (roleId: number) => {
     if (!selectedType) return;
     setLoading(true);
@@ -121,15 +227,13 @@ export default function KioskPage() {
       const res = await api.post('/queues/create', { type_id: selectedType.id, role_id: roleId });
       setTicket(res.data);
 
+      // Trigger silent print after state update
+      // We use a small timeout to let React render the ticket into the DOM
       setTimeout(() => {
-        window.print();
-        setPrintStep('success');
-        setTimeout(() => {
-          resetFlow();
-        }, 3000);
-      }, 1000);
+        handleSilentPrint();
+      }, 500);
 
-    } catch (err) {
+    } catch {
       alert("เกิดข้อผิดพลาดในการสร้างคิว");
       setLoading(false);
       setIsPrinting(false);
@@ -223,17 +327,17 @@ export default function KioskPage() {
   const roleGridStyle = getGridStyle(roles.length);
 
   return (
-    <div className={`h-[100dvh] bg-slate-50 flex flex-col overflow-hidden print:h-auto print:overflow-visible print:block relative ${GeistSans.className}`}>
+    <div className={`h-[100dvh] bg-slate-50 flex flex-col overflow-hidden relative ${GeistSans.className}`}>
 
       {/* Background Decor */}
-      <div className="absolute top-0 left-0 w-full h-full overflow-hidden -z-10 pointer-events-none opacity-60 print:hidden">
+      <div className="absolute top-0 left-0 w-full h-full overflow-hidden -z-10 pointer-events-none opacity-60">
         <div className="absolute top-[-20%] left-[-10%] w-[70%] h-[70%] bg-blue-200/40 rounded-full blur-[120px]"></div>
         <div className="absolute bottom-[-20%] right-[-10%] w-[70%] h-[70%] bg-pink-200/40 rounded-full blur-[120px]"></div>
       </div>
 
       {/* 1. Printing Modal */}
       {isPrinting && (
-        <div className="fixed inset-0 z-50 bg-white/80 backdrop-blur-3xl flex flex-col items-center justify-center text-slate-900 print:hidden animate-in fade-in duration-500">
+        <div className="fixed inset-0 z-50 bg-white/80 backdrop-blur-3xl flex flex-col items-center justify-center text-slate-900 animate-in fade-in duration-500">
           <div className="flex flex-col items-center justify-center py-20 scale-125">
             <div className="w-32 h-32 md:w-40 md:h-40 bg-white rounded-full flex items-center justify-center mb-10 shadow-[0_20px_50px_rgba(0,0,0,0.1)] border border-white/50">
               {printStep === 'success' ? (
@@ -256,16 +360,20 @@ export default function KioskPage() {
         </div>
       )}
 
-      {/* 2. Hidden Print Component */}
-      <QueueTicketPrint
-        ticket={ticket!}
-        queueType={selectedType}
-        roleName={roles.find(r => r.name)?.name || 'ผู้ติดต่อ'}
-        trackingUrl={trackingUrl}
-      />
+      {/* 2. Hidden Print Component (For Silent Print Capture) */}
+      <div style={{ position: 'fixed', top: 0, left: '-9999px', width: '80mm', background: 'white' }}>
+        <QueueTicketPrint
+          ref={printRef}
+          ticket={ticket!}
+          queueType={selectedType}
+          roleName={roles.find(r => r.name)?.name || 'ผู้ติดต่อ'}
+          trackingUrl={trackingUrl}
+          className="block" // Force block display for capture
+        />
+      </div>
 
       {/* 3. Kiosk UI */}
-      <header className="bg-white/60 backdrop-blur-xl shadow-sm px-4 md:px-8 py-4 md:py-6 flex justify-between items-center print:hidden sticky top-0 z-20 border-b border-white/40 flex-none h-[80px] md:h-[100px]">
+      <header className="bg-white/60 backdrop-blur-xl shadow-sm px-4 md:px-8 py-4 md:py-6 flex justify-between items-center z-20 border-b border-white/40 flex-none h-[80px] md:h-[100px]">
         <div className="flex items-center gap-4 md:gap-6">
           <DynamicLogo
             fallbackIcon={<Ticket size={24} className="md:w-8 md:h-8 text-white" />}
@@ -289,7 +397,7 @@ export default function KioskPage() {
         </div>
       </header>
 
-      <main className="flex-1 p-4 md:p-6 w-full flex flex-col print:hidden min-h-0 overflow-hidden overflow-y-auto">
+      <main className="flex-1 p-4 md:p-6 w-full flex flex-col min-h-0 overflow-hidden overflow-y-auto">
         {!selectedType ? (
           <div className="flex flex-col h-full">
             <h2 className="text-2xl md:text-4xl font-black text-slate-800 mb-4 md:mb-6 text-center flex-none drop-shadow-sm">{kioskSettings.title_type}</h2>
@@ -398,7 +506,7 @@ export default function KioskPage() {
         )}
       </main>
 
-      <footer className="p-4 md:p-6 text-center text-slate-400 text-xs md:text-sm font-medium print:hidden flex-none bg-white/40 backdrop-blur-md border-t border-white/30">
+      <footer className="p-4 md:p-6 text-center text-slate-400 text-xs md:text-sm font-medium flex-none bg-white/40 backdrop-blur-md border-t border-white/30">
         © {new Date().getFullYear()} {footerText || 'Developed by Antigravity'}
       </footer>
     </div>

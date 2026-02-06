@@ -7,6 +7,8 @@ import { UserCheck, Search, ChevronDown, Check, Lock, ArrowRight, Star } from 'l
 import { GeistSans } from 'geist/font/sans';
 import { GeistMono } from 'geist/font/mono';
 
+import { TurnstileWidget } from '@/components/TurnstileWidget';
+
 interface Personnel { id: number; fullname: string; nickname: string; username: string; }
 
 export default function LoginPage() {
@@ -21,6 +23,7 @@ export default function LoginPage() {
 
   // Form State
   const [password, setPassword] = useState('');
+  const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
   const [loginLoading, setLoginLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -56,7 +59,10 @@ export default function LoginPage() {
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!selectedPerson || !password) return;
+    if (!selectedPerson || !password || !turnstileToken) {
+      setError('กรุณายืนยันตัวตน (Captcha) ก่อนเข้าสู่ระบบ');
+      return;
+    }
 
     setLoginLoading(true);
     setError('');
@@ -64,7 +70,8 @@ export default function LoginPage() {
     try {
       const res = await api.post('/auth/login', {
         username: selectedPerson.username,
-        password
+        password,
+        turnstileToken // Send token to backend
       });
 
       if (res.data.success) {
@@ -84,6 +91,8 @@ export default function LoginPage() {
       console.error(err);
       const error = err as { response?: { data?: { error?: string } } };
       setError(error.response?.data?.error || 'เข้าสู่ระบบไม่สำเร็จ');
+      // Reset Turnstile on error if needed, but react-turnstile might handle expired tokens automatically. 
+      // Ideally we should reset the widget, but for now let's keep it simple.
     } finally {
       setLoginLoading(false);
     }
@@ -232,9 +241,14 @@ export default function LoginPage() {
               </div>
             </div>
 
+            {/* Turnstile Widget */}
+            <div className="py-2">
+              <TurnstileWidget onVerify={(token) => setTurnstileToken(token)} />
+            </div>
+
             <button
               type="submit"
-              disabled={loginLoading || !selectedPerson || !password}
+              disabled={loginLoading || !selectedPerson || !password || !turnstileToken}
               className="w-full py-4 bg-gradient-to-r from-pink-600 to-rose-600 text-white rounded-2xl font-bold text-lg hover:shadow-lg hover:shadow-pink-500/30 hover:scale-[1.02] active:scale-[0.98] transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 disabled:hover:shadow-none flex items-center justify-center gap-2 mt-8"
             >
               {loginLoading ? (

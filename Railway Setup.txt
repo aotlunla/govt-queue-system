@@ -31,3 +31,15 @@ root
 
 Public Networking
 govt-queue-system-production.up.railway.app
+
+
+
+
+
++----------------------------+
+⚠️ สิ่งที่ต้องทำก่อนขึ้น Production (สำคัญมาก):
+ตอนนี้ระบบใช้ Test Key อยู่ ซึ่งจะผ่านตลอดเสมอ (เพื่อให้ทดสอบได้) เมื่อท่านได้ Site Key และ Secret Key จาก Cloudflare แล้ว ให้ไปแก้ที่:
+
+Frontend (.env หรือ Vercel Variables): NEXT_PUBLIC_TURNSTILE_SITE_KEY=0x4AAAAAACYYUYFQZz7ssaLP
+Backend (Railway Variables): TURNSTILE_SECRET_KEY=0x4AAAAAACYYUfX0EG-VSwEQBzdnEOWmfgo
+มีส่วนไหนให้ผมช่วยต่ออีกไหมครับ? หรือจะให้ผมช่วยเรื่อง Deployment ขึ้น Server เลย?

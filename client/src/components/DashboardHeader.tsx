@@ -5,7 +5,7 @@ import { usePathname } from 'next/navigation';
 import { GeistSans } from 'geist/font/sans';
 import {
     LayoutDashboard, BarChart3, History, Users, Building2, Ticket,
-    Settings, Monitor, Menu, X, Printer, UserCircle2
+    Settings, Monitor, Menu, X, Printer, UserCircle2, Shield
 } from 'lucide-react';
 
 interface DashboardHeaderProps {
@@ -43,7 +43,8 @@ export function DashboardHeader({
         { name: 'จอแสดงผล', href: '/dashboard/admin/display-settings', icon: Monitor },
         { name: 'Kiosk', href: '/dashboard/admin/kiosk-settings', icon: Printer },
         { name: 'สถิติ', href: '/dashboard/admin/stats', icon: BarChart3 },
-        { name: 'ประวัติ', href: '/dashboard/admin/history', icon: History },
+        { name: 'ประวัติคิว', href: '/dashboard/admin/history', icon: History },
+        { name: 'เข้าใช้งาน', href: '/dashboard/admin/logs', icon: Shield },
         { name: 'ตั้งค่า', href: '/dashboard/admin/settings', icon: Settings },
     ];
 

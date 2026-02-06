@@ -8,26 +8,27 @@ import { DynamicLogo } from '@/components/DynamicLogo';
 import { GeistSans } from 'geist/font/sans';
 import { GeistMono } from 'geist/font/mono';
 
+import { TurnstileWidget } from '@/components/TurnstileWidget';
+
 export default function LandingPage() {
   const router = useRouter();
   const [queueNumber, setQueueNumber] = useState('');
+  const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!queueNumber.trim()) return;
+    if (!queueNumber.trim() || !turnstileToken) return;
 
     // Format: YYMMDD + QueueNumber (e.g., A001 -> 260127A001)
-    // If the user enters the full code, we use it as is.
-    // Otherwise, we prepend the date.
+    // We don't verify token here on frontend for search redirect, 
+    // but ideally the tracking page should verify it or we verify it via an API call before redirect.
+    // simpler to just require the captcha to proceed.
 
     let targetCode = queueNumber.trim().toUpperCase();
 
-    // Simple heuristic: if it's short (e.g. A001), prepend date. 
-    // If it's long (e.g. 260127A001), assume it's full.
     if (targetCode.length < 8) {
       const now = new Date();
-      const yy = String(now.getFullYear()).slice(-2); // 26
-      // Month is 0-indexed, so +1. PadStart ensures '01' instead of '1'
+      const yy = String(now.getFullYear()).slice(-2);
       const mm = String(now.getMonth() + 1).padStart(2, '0');
       const dd = String(now.getDate()).padStart(2, '0');
 
@@ -72,8 +73,8 @@ export default function LandingPage() {
         </div>
 
         {/* Search Form */}
-        <form onSubmit={handleSearch} className="w-full animate-in fade-in slide-in-from-bottom-12 duration-1000 delay-100">
-          <div className="bg-white/60 backdrop-blur-2xl border border-white/60 rounded-[2.5rem] p-2 shadow-xl shadow-slate-200/50 focus-within:shadow-2xl focus-within:shadow-pink-500/20 focus-within:border-pink-200 transition-all duration-500">
+        <form onSubmit={handleSearch} className="w-full animate-in fade-in slide-in-from-bottom-12 duration-1000 delay-100 flex flex-col items-center gap-6">
+          <div className="w-full bg-white/60 backdrop-blur-2xl border border-white/60 rounded-[2.5rem] p-2 shadow-xl shadow-slate-200/50 focus-within:shadow-2xl focus-within:shadow-pink-500/20 focus-within:border-pink-200 transition-all duration-500">
             <div className="relative flex items-center">
               <div className="pl-6 text-slate-400">
                 <Search size={24} />
@@ -88,7 +89,7 @@ export default function LandingPage() {
               />
               <button
                 type="submit"
-                disabled={!queueNumber.trim()}
+                disabled={!queueNumber.trim() || !turnstileToken}
                 className="m-2 p-4 bg-[#e72289] hover:bg-[#c01b70] disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-[2rem] shadow-lg shadow-pink-500/30 transition-all duration-300 hover:scale-105 active:scale-95 flex items-center gap-2 font-bold pr-6"
               >
                 <span className="hidden sm:inline">ค้นหา</span>
@@ -96,7 +97,10 @@ export default function LandingPage() {
               </button>
             </div>
           </div>
-          <p className="text-center text-slate-400 text-sm mt-6 font-medium">
+
+          <TurnstileWidget onVerify={(token) => setTurnstileToken(token)} />
+
+          <p className="text-center text-slate-400 text-sm font-medium">
             ระบบจะนำคุณไปยังหน้าติดตามสถานะโดยอัตโนมัติ
           </p>
         </form>

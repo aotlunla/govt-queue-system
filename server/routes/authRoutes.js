@@ -3,14 +3,67 @@ const router = express.Router();
 const db = require('../config/db');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
+const axios = require('axios');
 const { authMiddleware, JWT_SECRET } = require('../middleware/auth');
 
 // Login
 router.post('/login', async (req, res) => {
-    const { username, password } = req.body;
+    const { username, password, turnstileToken } = req.body;
+    const rawIp = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
+    const clientIp = rawIp ? rawIp.split(',')[0].trim() : null;
+    const userAgent = req.headers['user-agent'];
+
+    // 1. Verify Turnstile Token
+    let TURNSTILE_SECRET_KEY = process.env.TURNSTILE_SECRET_KEY || '1x0000000000000000000000000000000AA';
+
+    try {
+        const [settings] = await db.query('SELECT turnstile_secret_key FROM system_settings LIMIT 1');
+        if (settings.length > 0 && settings[0].turnstile_secret_key) {
+            TURNSTILE_SECRET_KEY = settings[0].turnstile_secret_key;
+        }
+    } catch (settingsErr) {
+        console.error('Failed to fetch Turnstile Secret Key from DB:', settingsErr);
+    }
+
+    if (!turnstileToken) {
+        return res.status(400).json({ error: 'Captcha Validation Failed (Missing Token)' });
+    }
+
+    try {
+        const verifyRes = await axios.post('https://challenges.cloudflare.com/turnstile/v0/siteverify', {
+            secret: TURNSTILE_SECRET_KEY,
+            response: turnstileToken,
+            remoteip: clientIp
+        }, {
+            headers: { 'Content-Type': 'application/json' }
+        });
+
+        if (!verifyRes.data.success) {
+            // Log Failed Attempt (Captcha Invalid)
+            await db.query(`
+                INSERT INTO login_logs (username, action_type, ip_address, user_agent, details)
+                VALUES (?, 'LOGIN_FAILED', ?, ?, 'Captcha Invalid')
+            `, [username || 'unknown', clientIp, userAgent]);
+
+            return res.status(400).json({ error: 'Captcha Validation Failed' });
+        }
+    } catch (verifyErr) {
+        console.error('Turnstile Verify Error:', verifyErr);
+        // Fail open or closed? Here failing open might be risky, but failing closed blocks users if CF is down.
+        // Let's fail closed for security but log it.
+        return res.status(500).json({ error: 'Captcha Verification Error' });
+    }
+
     try {
         const [users] = await db.query('SELECT * FROM personnel WHERE username = ? AND is_active = 1', [username]);
+
         if (users.length === 0) {
+            // Log Failed Attempt (User not found)
+            await db.query(`
+                INSERT INTO login_logs (username, action_type, ip_address, user_agent, details)
+                VALUES (?, 'LOGIN_FAILED', ?, ?, 'User not found OR inactive')
+            `, [username, clientIp, userAgent]);
+
             return res.status(401).json({ error: 'ชื่อผู้ใช้ไม่ถูกต้อง' });
         }
 
@@ -18,6 +71,12 @@ router.post('/login', async (req, res) => {
         const isMatch = await bcrypt.compare(password, user.password);
 
         if (!isMatch) {
+            // Log Failed Attempt (Wrong Password)
+            await db.query(`
+                INSERT INTO login_logs (personnel_id, username, role, action_type, ip_address, user_agent, details)
+                VALUES (?, ?, ?, 'LOGIN_FAILED', ?, ?, 'Incorrect password')
+            `, [user.id, user.username, user.role, clientIp, userAgent]);
+
             return res.status(401).json({ error: 'รหัสผ่านไม่ถูกต้อง' });
         }
 
@@ -27,6 +86,12 @@ router.post('/login', async (req, res) => {
             JWT_SECRET,
             { expiresIn: '8h' }
         );
+
+        // Log Success
+        await db.query(`
+            INSERT INTO login_logs (personnel_id, username, role, action_type, ip_address, user_agent, details)
+            VALUES (?, ?, ?, 'LOGIN_SUCCESS', ?, ?, 'Login successful')
+        `, [user.id, user.username, user.role, clientIp, userAgent]);
 
         // Return user info with token
         res.json({

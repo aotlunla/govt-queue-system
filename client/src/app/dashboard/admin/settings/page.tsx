@@ -23,11 +23,16 @@ export default function SettingsPage() {
     const [logoUrl, setLogoUrl] = useState('');
     const [footerText, setFooterText] = useState('');
 
+    // Turnstile State
+    const [turnstileSiteKey, setTurnstileSiteKey] = useState('');
+    const [turnstileSecretKey, setTurnstileSecretKey] = useState('');
+
     // Load settings on mount
     useEffect(() => {
         const fetchSettings = async () => {
             try {
-                const res = await api.get('/admin/settings');
+                // Use the protected endpoint to get all settings including secrets
+                const res = await api.get('/admin/system-settings');
                 if (res.data.agency_name) setOrgName(res.data.agency_name);
                 if (res.data.announcement_text) setAnnouncementText(res.data.announcement_text);
                 if (res.data.announcement_start) setAnnouncementStart(new Date(res.data.announcement_start).toISOString().slice(0, 16));
@@ -36,21 +41,15 @@ export default function SettingsPage() {
                 if (res.data.overdue_alert_minutes) setOverdueAlertMinutes(res.data.overdue_alert_minutes);
                 if (res.data.logo_url) setLogoUrl(res.data.logo_url);
                 if (res.data.footer_text) setFooterText(res.data.footer_text);
+                if (res.data.turnstile_site_key) setTurnstileSiteKey(res.data.turnstile_site_key);
+                if (res.data.turnstile_secret_key) setTurnstileSecretKey(res.data.turnstile_secret_key);
             } catch (err) {
                 console.error('Failed to fetch settings:', err);
+                // Fallback to public endpoint if protected fails?
             }
         };
         fetchSettings();
     }, []);
-
-    // Set Layout (Disabled to match Kiosk Styling)
-    // useEffect(() => {
-    //     setLayout({
-    //         title: "ตั้งค่าเว็บไซต์",
-    //         subtitle: <span className="text-slate-500 font-medium text-sm">จัดการข้อมูลทั่วไปและการแสดงผลของเว็บไซต์</span>,
-    //         fullWidth: true
-    //     });
-    // }, [setLayout]);
 
     const handleSave = async (e?: React.FormEvent) => {
         if (e) e.preventDefault();
@@ -65,7 +64,9 @@ export default function SettingsPage() {
                 announcement_active: announcementActive,
                 overdue_alert_minutes: overdueAlertMinutes === '' ? 0 : overdueAlertMinutes,
                 logo_url: logoUrl,
-                footer_text: footerText
+                footer_text: footerText,
+                turnstile_site_key: turnstileSiteKey,
+                turnstile_secret_key: turnstileSecretKey
             });
             alert('บันทึกการตั้งค่าเรียบร้อยแล้ว');
         } catch (err) {
@@ -134,6 +135,45 @@ export default function SettingsPage() {
                                 className="w-full p-4 bg-white/50 border border-slate-200 rounded-2xl focus:outline-none focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 transition-all font-medium resize-none h-32 text-slate-700"
                                 defaultValue="ระบบจองคิวออนไลน์ ให้บริการประชาชน สะดวก รวดเร็ว ทันสมัย"
                             ></textarea>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Turnstile Settings */}
+                <div className="bg-white/80 backdrop-blur-xl p-8 rounded-[2rem] shadow-sm border border-white/60 hover:shadow-xl hover:border-pink-200 transition-all duration-300 group">
+                    <div className="flex items-center gap-4 pb-6 border-b border-slate-100">
+                        <div className="w-12 h-12 rounded-2xl bg-orange-50 text-orange-600 flex items-center justify-center group-hover:bg-orange-600 group-hover:text-white transition-all duration-300 shadow-sm">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" /></svg>
+                        </div>
+                        <div>
+                            <h2 className="font-black text-xl text-slate-900">Cloudflare Turnstile</h2>
+                            <p className="text-sm font-medium text-slate-500">ตั้งค่าระบบป้องกัน Spam (Captcha)</p>
+                        </div>
+                    </div>
+
+                    <div className="space-y-6 mt-6">
+                        <div>
+                            <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2 ml-1">Site Key</label>
+                            <input
+                                type="text"
+                                className="w-full px-4 py-3 bg-white/50 border border-slate-200 rounded-2xl focus:outline-none focus:ring-4 focus:ring-orange-500/10 focus:border-orange-500 transition-all font-medium text-slate-700"
+                                value={turnstileSiteKey}
+                                onChange={(e) => setTurnstileSiteKey(e.target.value)}
+                                placeholder="0x4AAAAAA..."
+                            />
+                        </div>
+                        <div>
+                            <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2 ml-1">Secret Key</label>
+                            <input
+                                type="password"
+                                className="w-full px-4 py-3 bg-white/50 border border-slate-200 rounded-2xl focus:outline-none focus:ring-4 focus:ring-orange-500/10 focus:border-orange-500 transition-all font-medium text-slate-700"
+                                value={turnstileSecretKey}
+                                onChange={(e) => setTurnstileSecretKey(e.target.value)}
+                                placeholder="0x4AAAAAA..."
+                            />
+                            <p className="text-xs text-slate-400 font-medium mt-2">
+                                * หากไม่ระบุ จะใช้ค่า Test Key สำหรับการทดสอบ
+                            </p>
                         </div>
                     </div>
                 </div>

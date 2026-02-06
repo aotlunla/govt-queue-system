@@ -48,7 +48,7 @@ router.get('/personnel', async (req, res) => {
 // GET /settings (Public - for footer, display)
 router.get('/settings', async (req, res) => {
   try {
-    const [rows] = await db.query('SELECT agency_name, logo_url, footer_text, announcement_text, announcement_active, announcement_start, announcement_end, kiosk_settings FROM system_settings LIMIT 1');
+    const [rows] = await db.query('SELECT agency_name, logo_url, footer_text, announcement_text, announcement_active, announcement_start, announcement_end, kiosk_settings, turnstile_site_key FROM system_settings LIMIT 1');
     const result = rows[0] || {};
     // Parse kiosk_settings if it's a string
     if (result.kiosk_settings && typeof result.kiosk_settings === 'string') {
@@ -86,9 +86,53 @@ router.get('/kiosk-settings', async (req, res) => {
 // ==========================================
 router.use(authMiddleware);
 
+// GET /system-settings (Protected - for Admin Settings page)
+router.get('/system-settings', async (req, res) => {
+  try {
+    const [rows] = await db.query('SELECT * FROM system_settings LIMIT 1');
+    const result = rows[0] || {};
+    if (result.kiosk_settings && typeof result.kiosk_settings === 'string') {
+      result.kiosk_settings = JSON.parse(result.kiosk_settings);
+    }
+    res.json(result);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // ==========================================
 // 1. Personnel (Protected - Create/Update/Delete)
 // ==========================================
+// ... (existing personnel routes)
+
+// ...
+
+// PUT /settings (Protected - requires auth)
+router.put('/settings', async (req, res) => {
+  const {
+    agency_name, announcement_text, announcement_start, announcement_end, announcement_active,
+    overdue_alert_minutes, logo_url, footer_text,
+    turnstile_site_key, turnstile_secret_key
+  } = req.body;
+
+  try {
+    const [rows] = await db.query('SELECT id FROM system_settings LIMIT 1');
+    if (rows.length > 0) {
+      await db.query(
+        'UPDATE system_settings SET agency_name=?, announcement_text=?, announcement_start=?, announcement_end=?, announcement_active=?, overdue_alert_minutes=?, logo_url=?, footer_text=?, turnstile_site_key=?, turnstile_secret_key=?, updated_at=NOW() WHERE id=?',
+        [agency_name, announcement_text, announcement_start, announcement_end, announcement_active, overdue_alert_minutes, logo_url || null, footer_text || null, turnstile_site_key || null, turnstile_secret_key || null, rows[0].id]
+      );
+    } else {
+      await db.query(
+        'INSERT INTO system_settings (agency_name, announcement_text, announcement_start, announcement_end, announcement_active, overdue_alert_minutes, logo_url, footer_text, turnstile_site_key, turnstile_secret_key) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+        [agency_name, announcement_text, announcement_start, announcement_end, announcement_active, overdue_alert_minutes, logo_url || null, footer_text || null, turnstile_site_key || null, turnstile_secret_key || null]
+      );
+    }
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
 router.get('/personnel/full', async (req, res) => {
   try {
     const [rows] = await db.query('SELECT id, fullname, nickname, username, role, is_active FROM personnel WHERE is_active = 1 ORDER BY fullname');
@@ -414,6 +458,41 @@ router.put('/kiosk-settings', async (req, res) => {
     res.json({ success: true });
   } catch (err) {
     res.status(500).json({ error: err.message });
+  }
+});
+
+// GET /logs - Fetch login logs (Admin only)
+router.get('/logs', authMiddleware, adminOnly, async (req, res) => {
+  try {
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 20;
+    const offset = (page - 1) * limit;
+
+    const [logs] = await db.query(`
+            SELECT 
+                l.*,
+                p.fullname as personnel_name
+            FROM login_logs l
+            LEFT JOIN personnel p ON l.personnel_id = p.id
+            ORDER BY l.created_at DESC
+            LIMIT ? OFFSET ?
+        `, [limit, offset]);
+
+    const [countResult] = await db.query('SELECT COUNT(*) as total FROM login_logs');
+    const total = countResult[0].total;
+
+    res.json({
+      logs,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit)
+      }
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to fetch logs' });
   }
 });
 
