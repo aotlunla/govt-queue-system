@@ -266,7 +266,7 @@ function WorkstationContent() {
         const idsToCall = selectedIds.length > 0 ? selectedIds : (focusedQueue ? [focusedQueue.id] : []);
         if (idsToCall.length === 0) return;
 
-        const personnelId = localStorage.getItem('current_personnel_id');
+        const personnelId = localStorage.getItem('user_id');
 
         if (!activeCounterId) {
             alert('ไม่พบข้อมูลช่องบริการ (No Counter Selected)');
@@ -306,7 +306,7 @@ function WorkstationContent() {
         e.stopPropagation();
         if (!confirm('ต้องการยกเลิกการเรียกคิวนี้ใช่หรือไม่? (คิวจะกลับไปสถานะรอเรียก)')) return;
 
-        const personnelId = localStorage.getItem('current_personnel_id');
+        const personnelId = localStorage.getItem('user_id');
         try {
             await api.put(`/queues/${queueId}/cancel-call`, { personnel_id: personnelId });
             fetchQueues(localStorage.getItem('station_dept_id') || '1');
@@ -319,7 +319,7 @@ function WorkstationContent() {
         if (selectedIds.length === 0) return;
         if (!confirm(`ต้องการยกเลิกการเรียก ${selectedIds.length} รายการใช่หรือไม่?`)) return;
 
-        const personnelId = localStorage.getItem('current_personnel_id');
+        const personnelId = localStorage.getItem('user_id');
         try {
             await Promise.all(selectedIds.map(id =>
                 api.put(`/queues/${id}/cancel-call`, { personnel_id: personnelId })
@@ -337,7 +337,7 @@ function WorkstationContent() {
         const idsToProcess = selectedIds.length > 0 ? selectedIds : (focusedQueue ? [focusedQueue.id] : []);
         if (idsToProcess.length === 0) return;
 
-        const personnelId = localStorage.getItem('current_personnel_id');
+        const personnelId = localStorage.getItem('user_id');
         const url = '/queues/transfer-bulk';
         const payload = {
             queue_ids: idsToProcess,
@@ -359,7 +359,7 @@ function WorkstationContent() {
         if (!confirm(`ยืนยันจบงาน ${selectedIds.length} รายการ?`)) return;
 
         try {
-            const personnelId = localStorage.getItem('current_personnel_id');
+            const personnelId = localStorage.getItem('user_id');
 
             if (selectedIds.length === 1) {
                 // Single Complete
@@ -379,7 +379,7 @@ function WorkstationContent() {
         if (!confirm(`ยืนยันยกเลิก ${selectedIds.length} รายการ (ไม่มาแสดงตัว)?`)) return;
 
         try {
-            const personnelId = localStorage.getItem('current_personnel_id');
+            const personnelId = localStorage.getItem('user_id');
 
             if (selectedIds.length === 1) {
                 // Single Cancel
@@ -406,7 +406,7 @@ function WorkstationContent() {
         if (idsToRemark.length === 0) return;
 
         try {
-            const personnelId = localStorage.getItem('current_personnel_id');
+            const personnelId = localStorage.getItem('user_id');
 
             // Send remark to all selected queues
             await Promise.all(idsToRemark.map(id =>
@@ -961,7 +961,7 @@ function WorkstationContent() {
                                                                 </div>
                                                                 <p className="text-sm text-slate-600 font-medium leading-relaxed">{log.action_details}</p>
                                                                 <div className="mt-2 flex items-center gap-1.5 text-[10px] font-bold text-slate-400">
-                                                                    <User size={10} /> {log.staff_name || 'System'}
+                                                                    <User size={10} /> {log.staff_name || 'ระบบ'}
                                                                 </div>
                                                             </div>
                                                         </div>

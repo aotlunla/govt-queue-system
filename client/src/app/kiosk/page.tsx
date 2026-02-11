@@ -160,30 +160,29 @@ export default function KioskPage() {
         return;
       }
 
-      // Defined output width (mm) - slightly less than 80mm to safe margin
-      const contentWidth = 72;
-      const xOffset = (80 - contentWidth) / 2; // = 4mm margin
+      // Page width = full 80mm paper width (centering is done in HTML via margin: 0 auto)
+      const pageWidth = 80;
 
-      // Capture Slip 1 (Visitor) first to get dimensions
+      // Capture Slip 1 (Visitor)
       const canvas1 = await html2canvas(slips[0] as HTMLElement, {
         scale: 2,
         useCORS: true,
         logging: false,
         backgroundColor: '#ffffff',
-        windowWidth: 378
+        windowWidth: 302 // 80mm ≈ 302px at 96 DPI
       });
       const imgData1 = canvas1.toDataURL('image/png');
-      const calcHeight1 = (canvas1.height * contentWidth) / canvas1.width;
+      const calcHeight1 = (canvas1.height * pageWidth) / canvas1.width;
       const pdfHeight1 = Math.max(calcHeight1, 80); // Min height 80mm to prevent rotation
 
-      // Initialize PDF with the exact height of the first page + small padding if needed
+      // Initialize PDF with full page width
       const pdf = new jsPDF({
         orientation: 'p',
         unit: 'mm',
-        format: [80, pdfHeight1]
+        format: [pageWidth, pdfHeight1]
       });
 
-      pdf.addImage(imgData1, 'PNG', xOffset, 0, contentWidth, calcHeight1);
+      pdf.addImage(imgData1, 'PNG', 0, 0, pageWidth, calcHeight1);
 
       // Capture Slip 2 (Officer)
       const canvas2 = await html2canvas(slips[1] as HTMLElement, {
@@ -191,14 +190,14 @@ export default function KioskPage() {
         useCORS: true,
         logging: false,
         backgroundColor: '#ffffff',
-        windowWidth: 378
+        windowWidth: 302 // 80mm ≈ 302px at 96 DPI
       });
       const imgData2 = canvas2.toDataURL('image/png');
-      const calcHeight2 = (canvas2.height * contentWidth) / canvas2.width;
+      const calcHeight2 = (canvas2.height * pageWidth) / canvas2.width;
       const pdfHeight2 = Math.max(calcHeight2, 80); // Min height 80mm to prevent rotation
 
-      pdf.addPage([80, pdfHeight2], 'p');
-      pdf.addImage(imgData2, 'PNG', xOffset, 0, contentWidth, calcHeight2);
+      pdf.addPage([pageWidth, pdfHeight2], 'p');
+      pdf.addImage(imgData2, 'PNG', 0, 0, pageWidth, calcHeight2);
 
       const base64Pdf = pdf.output('datauristring').split(',')[1];
 

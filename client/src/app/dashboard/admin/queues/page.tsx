@@ -228,7 +228,7 @@ export default function QueueTypesPage() {
                                         </div>
                                     </div>
 
-                                    <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity translate-y-2 group-hover:translate-y-0">
+                                    <div className="flex gap-1 md:opacity-0 md:group-hover:opacity-100 transition-opacity md:translate-y-2 md:group-hover:translate-y-0">
                                         <button onClick={() => openEdit(t)} className="p-2 text-slate-400 hover:text-[#e72289] hover:bg-pink-50 rounded-xl transition-colors">
                                             <Edit2 size={18} />
                                         </button>
@@ -246,10 +246,10 @@ export default function QueueTypesPage() {
             {/* --- Modal Form --- */}
             {showModal && (
                 <Portal>
-                    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-md animate-in fade-in duration-300">
-                        <div className="bg-white/90 backdrop-blur-2xl w-full max-w-lg rounded-[2rem] shadow-2xl p-0 overflow-hidden animate-in zoom-in-95 duration-300 border border-white/50">
+                    <div className="fixed inset-0 z-[60] flex items-center justify-center p-2 sm:p-4 bg-slate-900/40 backdrop-blur-md animate-in fade-in duration-300">
+                        <div className="bg-white/90 backdrop-blur-2xl w-full max-w-lg rounded-[2rem] shadow-2xl p-0 overflow-hidden animate-in zoom-in-95 duration-300 border border-white/50 max-h-[95vh] overflow-y-auto">
 
-                            <div className="px-8 py-6 border-b border-black/5 flex justify-between items-center bg-white/50">
+                            <div className="px-4 sm:px-8 py-4 sm:py-6 border-b border-black/5 flex justify-between items-center bg-white/50">
                                 <h2 className="text-xl font-black text-slate-900 flex items-center gap-3">
                                     <div className="p-2.5 bg-pink-100 text-[#e72289] rounded-xl">
                                         {editingId ? <Edit2 size={20} /> : <Plus size={20} />}
@@ -261,7 +261,7 @@ export default function QueueTypesPage() {
                                 </button>
                             </div>
 
-                            <form onSubmit={handleSubmit} className="p-8 space-y-8">
+                            <form onSubmit={handleSubmit} className="p-4 sm:p-8 space-y-6 sm:space-y-8">
 
                                 {/* Preview Box */}
                                 <div className="flex flex-col items-center justify-center p-8 bg-slate-50/50 border border-slate-200/50 border-dashed rounded-3xl relative overflow-hidden">

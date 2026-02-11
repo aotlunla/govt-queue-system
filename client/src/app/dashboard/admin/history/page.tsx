@@ -244,7 +244,7 @@ export default function HistoryPage() {
                                                             {new Date(log.created_at).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })}
                                                         </div>
                                                         <div className="text-xs text-[#e72289] font-bold flex items-center justify-end gap-1">
-                                                            <User size={10} /> {log.staff_name || 'System'}
+                                                            <User size={10} /> {log.staff_name || 'ระบบ'}
                                                         </div>
                                                     </div>
                                                 </div>

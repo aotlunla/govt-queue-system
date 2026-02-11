@@ -33,14 +33,17 @@ export const QueueTicketPrint = React.forwardRef<HTMLDivElement, QueueTicketPrin
         <style jsx global>{`
           /* Always apply these styles so html2canvas can see them */
           .print-container {
-            width: 80mm;
-            padding: 5px;
+            width: 72mm;
+            padding: 0;
+            margin: 0 auto;
             background: white;
+            box-sizing: border-box;
           }
           .ticket-slip {
             width: 100%;
-            padding-bottom: 10px;
+            padding: 4px 0 10px 0;
             border-bottom: 1px dashed #000;
+            box-sizing: border-box;
           }
           .dashed-line {
             border-top: 1px dashed #000;

@@ -134,44 +134,33 @@ export default function TrackingPage() {
   const remarks = data.logs.filter(log => log.action_type === 'REMARK');
   const timelineLogs = data.logs.filter(log => log.action_type !== 'REMARK');
 
+  const getTrackingMessage = (key: 'tracking_message_calling' | 'tracking_message_cancelled' | 'tracking_message_completed') => {
+    const defaults: Record<string, string> = {
+      tracking_message_calling: 'คิวของท่าน {queue} ถูกเรียกแล้วที่ {department} {counter} โปรดติดต่อเพื่อรับบริการ',
+      tracking_message_cancelled: 'คิวของท่าน {queue} ถูกยกเลิก หากมีข้อสงสัยโปรดติดต่อเจ้าหน้าที่',
+      tracking_message_completed: 'คิวของท่าน {queue} ได้รับบริการเรียบร้อยแล้ว',
+    };
+    const template = settings?.kiosk_settings?.[key] || defaults[key];
+    return template
+      .replace(/{queue}/g, data.queue_number)
+      .replace(/{department}/g, data.current_dept_name || '')
+      .replace(/{counter}/g, data.current_counter_name || '')
+      .replace(/\s+/g, ' ')
+      .trim();
+  };
+
   const getStatusText = () => {
     if (data.status === 'CANCELLED') {
-      const template = settings?.kiosk_settings?.tracking_message_cancelled;
-      if (template) {
-        return template
-          .replace(/{queue}/g, data.queue_number)
-          .replace(/{department}/g, data.current_dept_name || '-')
-          .replace(/{counter}/g, data.current_counter_name || '-');
-      }
-      return 'ยกเลิก';
+      return getTrackingMessage('tracking_message_cancelled');
     }
     if (data.status === 'COMPLETED') {
-      const template = settings?.kiosk_settings?.tracking_message_completed;
-      if (template) {
-        return template
-          .replace(/{queue}/g, data.queue_number)
-          .replace(/{department}/g, data.current_dept_name || '-')
-          .replace(/{counter}/g, data.current_counter_name || '-');
-      }
-      return 'เสร็จสิ้น';
-    }
-    if (data.status_message) {
-      if (data.current_counter_name) {
-        return `${data.status_message} ${data.current_counter_name}`;
-      }
-      return data.status_message;
+      return getTrackingMessage('tracking_message_completed');
     }
     if (data.status === 'PROCESSING') {
-      const template = settings?.kiosk_settings?.tracking_message_calling;
-      if (template) {
-        return template
-          .replace(/{queue}/g, data.queue_number)
-          .replace(/{department}/g, data.current_dept_name || '-')
-          .replace(/{counter}/g, data.current_counter_name || '-');
-      }
-      return `กำลังให้บริการที่ ${data.current_counter_name || 'ช่องบริการ'}`;
+      return getTrackingMessage('tracking_message_calling');
     }
     if (data.status === 'WAITING') return 'รอเรียกคิว';
+    if (data.status_message) return data.status_message;
     return data.status;
   };
 
@@ -243,7 +232,7 @@ export default function TrackingPage() {
                     <div className="w-8 h-8 bg-white text-[#e72289] rounded-full flex items-center justify-center shadow-sm border border-black/5">
                       <Clock size={16} />
                     </div>
-                    <span className="text-xs font-bold text-slate-500 uppercase tracking-wide">คิวที่รออยู่</span>
+                    <span className="text-xs font-bold text-slate-500 uppercase tracking-wide">จำนวนคิวที่รอรับบริการอยู่ทั้งหมด</span>
                   </div>
                   <div className="flex items-baseline gap-1">
                     <span className={`text-2xl font-semibold text-slate-900 ${GeistMono.className}`}>{data.remaining_queues}</span>
@@ -319,14 +308,12 @@ export default function TrackingPage() {
                     {log.action_details}
                   </p>
 
-                  {log.staff_name && (
-                    <div className="mt-3 flex items-center gap-1.5 text-[10px] text-slate-400 font-medium">
-                      <div className="w-4 h-4 bg-slate-100 rounded-full flex items-center justify-center">
-                        <User size={10} />
-                      </div>
-                      <span>โดย: {log.staff_name}</span>
+                  <div className="mt-3 flex items-center gap-1.5 text-[10px] text-slate-400 font-medium">
+                    <div className="w-4 h-4 bg-slate-100 rounded-full flex items-center justify-center">
+                      <User size={10} />
                     </div>
-                  )}
+                    <span>โดย: {log.staff_name || 'ระบบ'}</span>
+                  </div>
                 </div>
               </div>
             ))}

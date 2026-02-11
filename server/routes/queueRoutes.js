@@ -200,27 +200,36 @@ router.get('/config', async (req, res) => {
 router.get('/', async (req, res) => {
     const { dept_id } = req.query;
     try {
-        // [NEW] Auto-Cancel Old Queues with Logging
-        const [oldQueues] = await db.query(`
+        // [NEW] Auto-Close Old Queues: PROCESSING → COMPLETED, others → CANCELLED
+        const [oldProcessing] = await db.query(`
             SELECT id FROM queues 
-            WHERE status IN ('WAITING', 'PROCESSING') 
+            WHERE status = 'PROCESSING' 
             AND DATE(created_at) < CURDATE()
         `);
 
-        if (oldQueues.length > 0) {
-            const oldIds = oldQueues.map(q => q.id);
-            const placeholders = oldIds.map(() => '?').join(',');
+        const [oldWaiting] = await db.query(`
+            SELECT id FROM queues 
+            WHERE status = 'WAITING' 
+            AND DATE(created_at) < CURDATE()
+        `);
 
-            // 1. Update Status
-            await db.query(`
-                UPDATE queues 
-                SET status = 'CANCELLED', updated_at = NOW() 
-                WHERE id IN (${placeholders})
-            `, oldIds);
+        // Auto-complete PROCESSING queues
+        if (oldProcessing.length > 0) {
+            const ids = oldProcessing.map(q => q.id);
+            const ph = ids.map(() => '?').join(',');
+            await db.query(`UPDATE queues SET status = 'COMPLETED', updated_at = NOW() WHERE id IN (${ph})`, ids);
+            for (const qId of ids) {
+                await addLog(qId, 'SYSTEM_COMPLETE', 'จบงานอัตโนมัติโดยระบบ (คิวค้างจากวันก่อน)', null);
+            }
+        }
 
-            // 2. Add Logs
-            for (const qId of oldIds) {
-                await addLog(qId, 'SYSTEM_CANCEL', 'ล้างคิวและยกเลิกโดยระบบ', null);
+        // Auto-cancel WAITING queues
+        if (oldWaiting.length > 0) {
+            const ids = oldWaiting.map(q => q.id);
+            const ph = ids.map(() => '?').join(',');
+            await db.query(`UPDATE queues SET status = 'CANCELLED', updated_at = NOW() WHERE id IN (${ph})`, ids);
+            for (const qId of ids) {
+                await addLog(qId, 'SYSTEM_CANCEL', 'ยกเลิกอัตโนมัติโดยระบบ (คิวค้างจากวันก่อน)', null);
             }
         }
 
@@ -462,25 +471,39 @@ router.put('/:id/call', async (req, res) => {
     const io = req.io;
 
     try {
-        // 1. Get Counter Name
-        const [counter] = await db.query('SELECT name FROM counters WHERE id = ?', [counter_id]);
+        // 1. Get queue's current department
+        const [queue] = await db.query('SELECT current_department_id FROM queues WHERE id = ?', [id]);
+        if (queue.length === 0) {
+            return res.status(404).json({ error: 'Queue not found' });
+        }
+        const deptId = queue[0].current_department_id;
 
-        if (counter.length === 0) {
-            return res.status(400).json({ error: 'Invalid Counter ID. Please check counter configuration.' });
+        // 2. Check if counter belongs to this department
+        let validCounterId = null;
+        let counterName = null;
+
+        if (counter_id) {
+            const [counter] = await db.query(
+                'SELECT name FROM counters WHERE id = ? AND department_id = ?',
+                [counter_id, deptId]
+            );
+            if (counter.length > 0) {
+                validCounterId = counter_id;
+                counterName = counter[0].name;
+            }
         }
 
-        const counterName = counter[0]?.name || '-';
-
-        // 2. Update Queue
+        // 3. Update Queue
         await db.query(
             `UPDATE queues 
        SET status = 'PROCESSING', current_counter_id = ?, updated_at = NOW() 
        WHERE id = ?`,
-            [counter_id, id]
+            [validCounterId, id]
         );
 
-        // 3. Log & Notify
-        await addLog(id, 'CALL', `เรียกคิวที่ช่อง ${counterName}`, personnel_id);
+        // 4. Log & Notify
+        const logMsg = counterName ? `เรียกคิวที่ช่อง ${counterName}` : 'เรียกคิว';
+        await addLog(id, 'CALL', logMsg, personnel_id);
         io.emit('queue_update', { msg: 'called' });
 
         res.json({ success: true });

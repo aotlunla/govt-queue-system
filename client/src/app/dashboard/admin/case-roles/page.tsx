@@ -5,6 +5,7 @@ import { api } from '@/lib/api';
 import { Users, Plus, Trash2, Edit2, UserCircle2, X, Palette, Check } from 'lucide-react';
 import { GeistSans } from 'geist/font/sans';
 import { GeistMono } from 'geist/font/mono';
+import Portal from '@/components/Portal';
 
 interface CaseRole {
     id: number;
@@ -196,76 +197,78 @@ export default function CaseRolesPage() {
 
             {/* Modal */}
             {showModal && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-md animate-in fade-in duration-300">
-                    <div className="bg-white/90 backdrop-blur-2xl w-full max-w-md rounded-[2rem] shadow-2xl p-8 animate-in zoom-in-95 duration-300 border border-white/50">
-                        <div className="flex justify-between items-center mb-6">
-                            <h2 className="text-2xl font-black text-slate-900 flex items-center gap-3">
-                                <div className="p-2 bg-pink-100 text-[#e72289] rounded-xl">
-                                    {form.id ? <Edit2 size={24} /> : <Plus size={24} />}
+                <Portal>
+                    <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-md animate-in fade-in duration-300">
+                        <div className="bg-white/90 backdrop-blur-2xl w-full max-w-md rounded-[2rem] shadow-2xl p-8 animate-in zoom-in-95 duration-300 border border-white/50">
+                            <div className="flex justify-between items-center mb-6">
+                                <h2 className="text-2xl font-black text-slate-900 flex items-center gap-3">
+                                    <div className="p-2 bg-pink-100 text-[#e72289] rounded-xl">
+                                        {form.id ? <Edit2 size={24} /> : <Plus size={24} />}
+                                    </div>
+                                    {form.id ? 'แก้ไขสถานะ' : 'เพิ่มสถานะใหม่'}
+                                </h2>
+                                <button onClick={() => setShowModal(false)} className="p-2 hover:bg-black/5 rounded-full transition-colors text-slate-400 hover:text-slate-600">
+                                    <X size={24} />
+                                </button>
+                            </div>
+
+                            <form onSubmit={handleSave} className="space-y-6">
+                                <div>
+                                    <label className="text-xs font-bold text-slate-500 uppercase tracking-wider ml-1">ชื่อสถานะ</label>
+                                    <input required type="text"
+                                        className="w-full px-4 py-3 mt-1.5 bg-white/50 border border-slate-200 rounded-2xl focus:border-[#e72289] focus:ring-4 focus:ring-pink-500/10 outline-none transition-all font-medium text-slate-800"
+                                        placeholder="เช่น โจทย์, จำเลย"
+                                        value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} autoFocus />
                                 </div>
-                                {form.id ? 'แก้ไขสถานะ' : 'เพิ่มสถานะใหม่'}
-                            </h2>
-                            <button onClick={() => setShowModal(false)} className="p-2 hover:bg-black/5 rounded-full transition-colors text-slate-400 hover:text-slate-600">
-                                <X size={24} />
-                            </button>
+
+                                <div>
+                                    <label className="text-xs font-bold text-slate-500 uppercase tracking-wider ml-1 flex items-center gap-2">
+                                        <Palette size={14} /> สีประจำสถานะ
+                                    </label>
+                                    <div className="mt-1.5 flex gap-3 items-center">
+                                        <input
+                                            type="color"
+                                            value={form.badge_color || '#e72289'}
+                                            onChange={e => setForm({ ...form, badge_color: e.target.value })}
+                                            className="w-12 h-12 rounded-xl cursor-pointer border-0"
+                                        />
+                                        <input
+                                            type="text"
+                                            value={form.badge_color}
+                                            onChange={e => setForm({ ...form, badge_color: e.target.value })}
+                                            placeholder="#e72289"
+                                            className="flex-1 px-4 py-3 bg-white/50 border border-slate-200 rounded-2xl focus:border-[#e72289] focus:ring-4 focus:ring-pink-500/10 outline-none transition-all font-medium text-slate-800 font-mono"
+                                        />
+                                    </div>
+                                    <div className="mt-3 flex flex-wrap gap-2">
+                                        {COLORS.map((color) => (
+                                            <button
+                                                key={color}
+                                                type="button"
+                                                onClick={() => setForm({ ...form, badge_color: color })}
+                                                className={`w-8 h-8 rounded-full shadow-sm transition-all flex items-center justify-center border border-slate-200 ${form.badge_color === color ? 'ring-2 ring-offset-2 ring-[#e72289] scale-110' : 'hover:scale-110'}`}
+                                                style={{ backgroundColor: color }}
+                                            >
+                                                {form.badge_color === color && <Check size={14} className="text-white drop-shadow-md" />}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+
+                                <div className="flex gap-3 pt-2">
+                                    <button type="button" onClick={() => setShowModal(false)}
+                                        className="flex-1 py-3.5 rounded-2xl border border-slate-200 text-slate-600 font-bold hover:bg-slate-50 transition-all">
+                                        ยกเลิก
+                                    </button>
+                                    <button type="submit"
+                                        className="flex-1 py-3.5 rounded-2xl bg-[#e72289] hover:bg-[#c01b70] text-white font-bold shadow-lg shadow-pink-500/30 transition-all transform active:scale-[0.98]">
+                                        บันทึก
+                                    </button>
+                                </div>
+                            </form>
                         </div>
-
-                        <form onSubmit={handleSave} className="space-y-6">
-                            <div>
-                                <label className="text-xs font-bold text-slate-500 uppercase tracking-wider ml-1">ชื่อสถานะ</label>
-                                <input required type="text"
-                                    className="w-full px-4 py-3 mt-1.5 bg-white/50 border border-slate-200 rounded-2xl focus:border-[#e72289] focus:ring-4 focus:ring-pink-500/10 outline-none transition-all font-medium text-slate-800"
-                                    placeholder="เช่น โจทย์, จำเลย"
-                                    value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} autoFocus />
-                            </div>
-
-                            <div>
-                                <label className="text-xs font-bold text-slate-500 uppercase tracking-wider ml-1 flex items-center gap-2">
-                                    <Palette size={14} /> สีประจำสถานะ
-                                </label>
-                                <div className="mt-1.5 flex gap-3 items-center">
-                                    <input
-                                        type="color"
-                                        value={form.badge_color || '#e72289'}
-                                        onChange={e => setForm({ ...form, badge_color: e.target.value })}
-                                        className="w-12 h-12 rounded-xl cursor-pointer border-0"
-                                    />
-                                    <input
-                                        type="text"
-                                        value={form.badge_color}
-                                        onChange={e => setForm({ ...form, badge_color: e.target.value })}
-                                        placeholder="#e72289"
-                                        className="flex-1 px-4 py-3 bg-white/50 border border-slate-200 rounded-2xl focus:border-[#e72289] focus:ring-4 focus:ring-pink-500/10 outline-none transition-all font-medium text-slate-800 font-mono"
-                                    />
-                                </div>
-                                <div className="mt-3 flex flex-wrap gap-2">
-                                    {COLORS.map((color) => (
-                                        <button
-                                            key={color}
-                                            type="button"
-                                            onClick={() => setForm({ ...form, badge_color: color })}
-                                            className={`w-8 h-8 rounded-full shadow-sm transition-all flex items-center justify-center border border-slate-200 ${form.badge_color === color ? 'ring-2 ring-offset-2 ring-[#e72289] scale-110' : 'hover:scale-110'}`}
-                                            style={{ backgroundColor: color }}
-                                        >
-                                            {form.badge_color === color && <Check size={14} className="text-white drop-shadow-md" />}
-                                        </button>
-                                    ))}
-                                </div>
-                            </div>
-
-                            <div className="flex gap-3 pt-2">
-                                <button type="button" onClick={() => setShowModal(false)}
-                                    className="flex-1 py-3.5 rounded-2xl border border-slate-200 text-slate-600 font-bold hover:bg-slate-50 transition-all">
-                                    ยกเลิก
-                                </button>
-                                <button type="submit"
-                                    className="flex-1 py-3.5 rounded-2xl bg-[#e72289] hover:bg-[#c01b70] text-white font-bold shadow-lg shadow-pink-500/30 transition-all transform active:scale-[0.98]">
-                                    บันทึก
-                                </button>
-                            </div>
-                        </form>
                     </div>
-                </div>
+                </Portal>
             )}
         </div>
     );

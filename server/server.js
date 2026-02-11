@@ -64,14 +64,14 @@ app.use(cors({
 // Rate Limiting - General
 const generalLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 500, // 500 requests per window
+  max: 10000, // 2000 requests per window (handles multiple pages polling simultaneously)
   message: { error: 'Too many requests, please try again later' }
 });
 
 // Rate Limiting - Login (Stricter)
 const loginLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // 100 login attempts (Relaxed for Dev)
+  max: 1000, // 100 login attempts (Relaxed for Dev)
   message: { error: 'เข้าสู่ระบบผิดพลาดหลายครั้ง กรุณารอ 15 นาที' }
 });
 

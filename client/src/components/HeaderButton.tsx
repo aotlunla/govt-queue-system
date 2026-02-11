@@ -23,8 +23,8 @@ export function HeaderButton({
     isActive = false
 }: HeaderButtonProps) {
     // Base styles: Flex layout, padding, font, transition
-    // Note: Shadows and colors are handled by clay-btn-* classes
-    const baseStyles = "h-12 flex items-center gap-3 px-5 transition-all duration-200 font-bold text-sm cursor-pointer group active:scale-95";
+    // Mobile: icon only with compact padding. sm+: full label with wider padding.
+    const baseStyles = "h-12 flex items-center gap-1.5 sm:gap-3 px-3 sm:px-5 transition-all duration-200 font-bold text-sm cursor-pointer group active:scale-95";
 
     const variants = {
         default: "clay-btn-secondary",
@@ -40,14 +40,14 @@ export function HeaderButton({
             className={`${baseStyles} ${variants[variant]} ${activeStyles} ${className} ${GeistSans.className}`}
         >
             {icon && (
-                <div className={`flex items-center justify-center transition-transform group-hover:scale-110 ${subLabel ? 'w-8 h-8 rounded-xl bg-white/50 text-current border border-white/20 shadow-inner' : ''}`}>
+                <div className={`flex items-center justify-center transition-transform group-hover:scale-110 shrink-0 ${subLabel ? 'w-8 h-8 rounded-xl bg-white/50 text-current border border-white/20 shadow-inner' : ''}`}>
                     {icon}
                 </div>
             )}
 
             {(label || subLabel) && (
-                <div className="flex flex-col items-start text-left">
-                    {label && <span className="leading-none drop-shadow-sm">{label}</span>}
+                <div className="hidden sm:flex flex-col items-start text-left">
+                    {label && <span className="leading-none drop-shadow-sm whitespace-nowrap">{label}</span>}
                     {subLabel && (
                         <span className={`text-[10px] font-bold mt-1 flex items-center gap-1 ${subLabel === 'Online' ? 'text-emerald-500' : 'opacity-90'}`}>
                             {subLabel === 'Online' && <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />}

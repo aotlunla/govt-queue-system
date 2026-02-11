@@ -220,7 +220,7 @@ export default function DepartmentsPage() {
                                     </div>
 
                                     {/* Actions */}
-                                    <div className={`absolute top-3 right-3 flex gap-1 ${selectedDept?.id === d.id ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'} transition-all`}>
+                                    <div className={`absolute top-3 right-3 flex gap-1 ${selectedDept?.id === d.id ? 'opacity-100' : 'md:opacity-0 md:group-hover:opacity-100'} transition-all`}>
                                         <button
                                             onClick={(e) => { e.stopPropagation(); setDeptForm(d); setShowDeptModal(true); }}
                                             className={`p-1.5 rounded-lg transition-colors ${selectedDept?.id === d.id ? 'text-white hover:bg-white/20' : 'text-slate-400 hover:text-[#e72289] hover:bg-pink-50'}`}
@@ -276,7 +276,7 @@ export default function DepartmentsPage() {
                                                     <div className={`w-10 h-10 bg-pink-50 text-[#e72289] rounded-xl flex items-center justify-center font-black text-lg ${GeistMono.className}`}>
                                                         {c.id}
                                                     </div>
-                                                    <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                    <div className="flex gap-1 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
                                                         <button
                                                             onClick={() => { setCounterForm(c); setShowCounterModal(true); }}
                                                             className="p-1.5 text-slate-400 hover:text-[#e72289] hover:bg-pink-50 rounded-lg"
