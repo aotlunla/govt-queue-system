@@ -70,8 +70,8 @@ const generalLimiter = rateLimit({
 
 // Rate Limiting - Login (Stricter)
 const loginLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 1000, // 100 login attempts (Relaxed for Dev)
+  windowMs: 15 * 60 * 10000, // 15 minutes
+  max: 10000, // 100 login attempts (Relaxed for Dev)
   message: { error: 'เข้าสู่ระบบผิดพลาดหลายครั้ง กรุณารอ 15 นาที' }
 });
 
