@@ -63,7 +63,7 @@ app.use(cors({
 
 // Rate Limiting - General
 const generalLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
+  windowMs: 15 * 60 * 10000, // 15 minutes
   max: 10000, // 2000 requests per window (handles multiple pages polling simultaneously)
   message: { error: 'Too many requests, please try again later' }
 });
