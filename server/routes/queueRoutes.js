@@ -23,6 +23,7 @@ router.get('/stats/dashboard', async (req, res) => {
     `);
         res.json(rows[0]);
     } catch (err) {
+        console.error('Queue Route Error:', err);
         res.status(500).json({ error: err.message });
     }
 });
@@ -86,6 +87,7 @@ router.get('/stats/summary', async (req, res) => {
             byDay
         });
     } catch (err) {
+        console.error('Queue Route Error:', err);
         res.status(500).json({ error: err.message });
     }
 });
@@ -122,6 +124,7 @@ router.get('/history/all', async (req, res) => {
         const [rows] = await db.query(sql, params);
         res.json(rows);
     } catch (err) {
+        console.error('Queue Route Error:', err);
         res.status(500).json({ error: err.message });
     }
 });
@@ -151,6 +154,7 @@ router.get('/search', async (req, res) => {
         // Return empty array instead of 404 for dropdown
         res.json(rows);
     } catch (err) {
+        console.error('Queue Route Error:', err);
         res.status(500).json({ error: err.message });
     }
 });
@@ -190,6 +194,7 @@ router.get('/config', async (req, res) => {
 
         res.json({ types, roles, departments: depts, counters });
     } catch (err) {
+        console.error('Queue Route Error:', err);
         res.status(500).json({ error: err.message });
     }
 });
@@ -273,6 +278,7 @@ router.get('/:id/logs', async (req, res) => {
     `, [req.params.id]);
         res.json(rows);
     } catch (err) {
+        console.error('Queue Route Error:', err);
         res.status(500).json({ error: err.message });
     }
 });
@@ -369,6 +375,7 @@ router.get('/display/:configId', async (req, res) => {
 
         res.json({ config: configs[0], queues });
     } catch (err) {
+        console.error('Queue Route Error:', err);
         res.status(500).json({ error: err.message });
     }
 });
@@ -432,6 +439,7 @@ router.get('/track/:code', async (req, res) => {
 
         res.json({ ...queue, logs, remaining_queues: stats[0].count });
     } catch (err) {
+        console.error('Queue Route Error:', err);
         res.status(500).json({ error: err.message });
     }
 });
@@ -452,6 +460,7 @@ router.get('/public/:id', async (req, res) => {
         if (rows.length === 0) return res.status(404).json({ error: 'Queue not found' });
         res.json(rows[0]);
     } catch (err) {
+        console.error('Queue Route Error:', err);
         res.status(500).json({ error: err.message });
     }
 });
@@ -508,6 +517,7 @@ router.put('/:id/call', async (req, res) => {
 
         res.json({ success: true });
     } catch (err) {
+        console.error('Queue Route Error:', err);
         res.status(500).json({ error: err.message });
     }
 });
@@ -535,6 +545,7 @@ router.put('/:id/cancel-call', async (req, res) => {
 
         res.json({ success: true });
     } catch (err) {
+        console.error('Queue Route Error:', err);
         res.status(500).json({ error: err.message });
     }
 });
@@ -571,6 +582,7 @@ router.put('/call-bulk', async (req, res) => {
         io.emit('queue_update', { msg: 'bulk_called' });
         res.json({ success: true });
     } catch (err) {
+        console.error('Queue Route Error:', err);
         res.status(500).json({ error: err.message });
     }
 });
@@ -621,6 +633,7 @@ router.put('/:id/transfer', async (req, res) => {
 
         res.json({ success: true });
     } catch (err) {
+        console.error('Queue Route Error:', err);
         res.status(500).json({ error: err.message });
     }
 });
@@ -657,6 +670,7 @@ router.post('/transfer-bulk', async (req, res) => {
         io.emit('queue_update', { msg: 'bulk_transfer' });
         res.json({ success: true });
     } catch (err) {
+        console.error('Queue Route Error:', err);
         res.status(500).json({ error: err.message });
     }
 });
@@ -674,6 +688,7 @@ router.put('/:id/complete', async (req, res) => {
         io.emit('queue_update', { msg: 'completed' });
         res.json({ success: true });
     } catch (err) {
+        console.error('Queue Route Error:', err);
         res.status(500).json({ error: err.message });
     }
 });
@@ -691,6 +706,7 @@ router.put('/:id/cancel', async (req, res) => {
         io.emit('queue_update', { msg: 'cancelled' });
         res.json({ success: true });
     } catch (err) {
+        console.error('Queue Route Error:', err);
         res.status(500).json({ error: err.message });
     }
 });
@@ -704,6 +720,7 @@ router.get('/:id', async (req, res) => {
         if (rows.length === 0) return res.status(404).json({ error: 'Queue not found' });
         res.json(rows[0]);
     } catch (err) {
+        console.error('Queue Route Error:', err);
         res.status(500).json({ error: err.message });
     }
 });
@@ -721,6 +738,7 @@ router.post('/:id/remark', async (req, res) => {
         await addLog(id, 'REMARK', remark, personnel_id);
         res.json({ success: true });
     } catch (err) {
+        console.error('Queue Route Error:', err);
         res.status(500).json({ error: err.message });
     }
 });
@@ -748,6 +766,7 @@ router.put('/complete-bulk', async (req, res) => {
         io.emit('queue_update', { msg: 'bulk_completed' });
         res.json({ success: true });
     } catch (err) {
+        console.error('Queue Route Error:', err);
         res.status(500).json({ error: err.message });
     }
 });
@@ -775,6 +794,7 @@ router.put('/cancel-bulk', async (req, res) => {
         io.emit('queue_update', { msg: 'bulk_cancelled' });
         res.json({ success: true });
     } catch (err) {
+        console.error('Queue Route Error:', err);
         res.status(500).json({ error: err.message });
     }
 });
@@ -789,6 +809,7 @@ router.post('/print', async (req, res) => {
         console.log("🖨️ Printing Queue:", queue);
         res.json({ success: true, message: 'Print job received' });
     } catch (err) {
+        console.error('Queue Route Error:', err);
         res.status(500).json({ error: err.message });
     }
 });
@@ -801,6 +822,7 @@ router.delete('/logs/:id', async (req, res) => {
         await db.query('DELETE FROM queue_logs WHERE id = ?', [req.params.id]);
         res.json({ success: true });
     } catch (err) {
+        console.error('Queue Route Error:', err);
         res.status(500).json({ error: err.message });
     }
 });

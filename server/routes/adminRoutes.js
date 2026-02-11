@@ -42,7 +42,7 @@ router.get('/personnel', async (req, res) => {
     // Only return minimal public info for login selection
     const [rows] = await db.query('SELECT id, fullname, nickname, username FROM personnel WHERE is_active = 1 ORDER BY fullname');
     res.json(rows);
-  } catch (err) { res.status(500).json({ error: err.message }); }
+  } catch (err) { console.error('Admin Route Error:', err); res.status(500).json({ error: err.message }); }
 });
 
 // GET /settings (Public - for footer, display)
@@ -56,6 +56,7 @@ router.get('/settings', async (req, res) => {
     }
     res.json(result);
   } catch (err) {
+    console.error('Admin Route Error:', err);
     res.status(500).json({ error: err.message });
   }
 });
@@ -77,6 +78,7 @@ router.get('/kiosk-settings', async (req, res) => {
       primary_color: '#e72289'
     });
   } catch (err) {
+    console.error('Admin Route Error:', err);
     res.status(500).json({ error: err.message });
   }
 });
@@ -96,6 +98,7 @@ router.get('/system-settings', async (req, res) => {
     }
     res.json(result);
   } catch (err) {
+    console.error('Admin Route Error:', err);
     res.status(500).json({ error: err.message });
   }
 });
@@ -130,6 +133,7 @@ router.put('/settings', async (req, res) => {
     }
     res.json({ success: true });
   } catch (err) {
+    console.error('Admin Route Error:', err);
     res.status(500).json({ error: err.message });
   }
 });
@@ -137,7 +141,7 @@ router.get('/personnel/full', async (req, res) => {
   try {
     const [rows] = await db.query('SELECT id, fullname, nickname, username, role, is_active FROM personnel WHERE is_active = 1 ORDER BY fullname');
     res.json(rows);
-  } catch (err) { res.status(500).json({ error: err.message }); }
+  } catch (err) { console.error('Admin Route Error:', err); res.status(500).json({ error: err.message }); }
 });
 
 router.post('/personnel', async (req, res) => {
@@ -155,7 +159,7 @@ router.post('/personnel', async (req, res) => {
       [fullname, nickname, username, hashedPassword, role || 'staff']
     );
     res.json({ success: true, id: result.insertId });
-  } catch (err) { res.status(500).json({ error: err.message }); }
+  } catch (err) { console.error('Admin Route Error:', err); res.status(500).json({ error: err.message }); }
 });
 
 router.put('/personnel/:id', async (req, res) => {
@@ -175,14 +179,14 @@ router.put('/personnel/:id', async (req, res) => {
 
     await db.query(query, params);
     res.json({ success: true });
-  } catch (err) { res.status(500).json({ error: err.message }); }
+  } catch (err) { console.error('Admin Route Error:', err); res.status(500).json({ error: err.message }); }
 });
 
 router.delete('/personnel/:id', async (req, res) => {
   try {
     await db.query('UPDATE personnel SET is_active = 0 WHERE id = ?', [req.params.id]);
     res.json({ success: true });
-  } catch (err) { res.status(500).json({ error: err.message }); }
+  } catch (err) { console.error('Admin Route Error:', err); res.status(500).json({ error: err.message }); }
 });
 
 // ==========================================
@@ -198,7 +202,7 @@ router.get('/departments', async (req, res) => {
       ORDER BY d.sort_order
     `);
     res.json(rows);
-  } catch (err) { res.status(500).json({ error: err.message }); }
+  } catch (err) { console.error('Admin Route Error:', err); res.status(500).json({ error: err.message }); }
 });
 
 router.post('/departments', async (req, res) => {
@@ -208,7 +212,7 @@ router.post('/departments', async (req, res) => {
     const nextOrder = (last[0].maxOrder || 0) + 1;
     const [result] = await db.query('INSERT INTO departments (name, code, status_message, sort_order) VALUES (?, ?, ?, ?)', [name, code, status_message || null, nextOrder]);
     res.json({ success: true, id: result.insertId });
-  } catch (err) { res.status(500).json({ error: err.message }); }
+  } catch (err) { console.error('Admin Route Error:', err); res.status(500).json({ error: err.message }); }
 });
 
 router.put('/departments/:id', async (req, res) => {
@@ -221,14 +225,14 @@ router.put('/departments/:id', async (req, res) => {
     }
     await db.query('UPDATE departments SET name=?, code=?, status_message=?, sort_order=? WHERE id=?', [name, code, status_message || null, sort_order, id]);
     res.json({ success: true });
-  } catch (err) { res.status(500).json({ error: err.message }); }
+  } catch (err) { console.error('Admin Route Error:', err); res.status(500).json({ error: err.message }); }
 });
 
 router.delete('/departments/:id', async (req, res) => {
   try {
     await db.query('UPDATE departments SET is_active = 0 WHERE id = ?', [req.params.id]);
     res.json({ success: true });
-  } catch (err) { res.status(500).json({ error: err.message }); }
+  } catch (err) { console.error('Admin Route Error:', err); res.status(500).json({ error: err.message }); }
 });
 
 // ==========================================
@@ -300,7 +304,7 @@ router.get('/queue-types', async (req, res) => {
   try {
     const [rows] = await db.query('SELECT * FROM queue_types ORDER BY sort_order');
     res.json(rows);
-  } catch (err) { res.status(500).json({ error: err.message }); }
+  } catch (err) { console.error('Admin Route Error:', err); res.status(500).json({ error: err.message }); }
 });
 
 router.post('/queue-types', async (req, res) => {
@@ -310,7 +314,7 @@ router.post('/queue-types', async (req, res) => {
     const nextOrder = (last[0].maxOrder || 0) + 1;
     const [result] = await db.query('INSERT INTO queue_types (name, code, badge_color, default_department_id, sort_order) VALUES (?, ?, ?, ?, ?)', [name, code, badge_color, default_department_id || null, nextOrder]);
     res.json({ success: true, id: result.insertId });
-  } catch (err) { res.status(500).json({ error: err.message }); }
+  } catch (err) { console.error('Admin Route Error:', err); res.status(500).json({ error: err.message }); }
 });
 
 router.put('/queue-types/:id', async (req, res) => {
@@ -323,14 +327,14 @@ router.put('/queue-types/:id', async (req, res) => {
     }
     await db.query('UPDATE queue_types SET name=?, code=?, badge_color=?, default_department_id=?, sort_order=? WHERE id=?', [name, code, badge_color, default_department_id || null, sort_order, id]);
     res.json({ success: true });
-  } catch (err) { res.status(500).json({ error: err.message }); }
+  } catch (err) { console.error('Admin Route Error:', err); res.status(500).json({ error: err.message }); }
 });
 
 router.delete('/queue-types/:id', async (req, res) => {
   try {
     await db.query('DELETE FROM queue_types WHERE id = ?', [req.params.id]);
     res.json({ success: true });
-  } catch (err) { res.status(500).json({ error: err.message }); }
+  } catch (err) { console.error('Admin Route Error:', err); res.status(500).json({ error: err.message }); }
 });
 
 // ==========================================
@@ -340,7 +344,7 @@ router.get('/case-roles', async (req, res) => {
   try {
     const [rows] = await db.query('SELECT * FROM case_roles ORDER BY sort_order');
     res.json(rows);
-  } catch (err) { res.status(500).json({ error: err.message }); }
+  } catch (err) { console.error('Admin Route Error:', err); res.status(500).json({ error: err.message }); }
 });
 
 router.post('/case-roles', async (req, res) => {
@@ -350,7 +354,7 @@ router.post('/case-roles', async (req, res) => {
     const nextOrder = (last[0].maxOrder || 0) + 1;
     const [result] = await db.query('INSERT INTO case_roles (name, badge_color, sort_order) VALUES (?, ?, ?)', [name, badge_color || null, nextOrder]);
     res.json({ success: true, id: result.insertId });
-  } catch (err) { res.status(500).json({ error: err.message }); }
+  } catch (err) { console.error('Admin Route Error:', err); res.status(500).json({ error: err.message }); }
 });
 
 router.put('/case-roles/:id', async (req, res) => {
@@ -363,14 +367,14 @@ router.put('/case-roles/:id', async (req, res) => {
     }
     await db.query('UPDATE case_roles SET name=?, badge_color=?, sort_order=? WHERE id=?', [name, badge_color || null, sort_order, id]);
     res.json({ success: true });
-  } catch (err) { res.status(500).json({ error: err.message }); }
+  } catch (err) { console.error('Admin Route Error:', err); res.status(500).json({ error: err.message }); }
 });
 
 router.delete('/case-roles/:id', async (req, res) => {
   try {
     await db.query('DELETE FROM case_roles WHERE id = ?', [req.params.id]);
     res.json({ success: true });
-  } catch (err) { res.status(500).json({ error: err.message }); }
+  } catch (err) { console.error('Admin Route Error:', err); res.status(500).json({ error: err.message }); }
 });
 
 // ==========================================
@@ -380,7 +384,7 @@ router.get('/display-configs', async (req, res) => {
   try {
     const [rows] = await db.query('SELECT * FROM display_configs ORDER BY id');
     res.json(rows);
-  } catch (err) { res.status(500).json({ error: err.message }); }
+  } catch (err) { console.error('Admin Route Error:', err); res.status(500).json({ error: err.message }); }
 });
 
 router.post('/display-configs', async (req, res) => {
@@ -411,7 +415,7 @@ router.delete('/display-configs/:id', async (req, res) => {
   try {
     await db.query('DELETE FROM display_configs WHERE id = ?', [req.params.id]);
     res.json({ success: true });
-  } catch (err) { res.status(500).json({ error: err.message }); }
+  } catch (err) { console.error('Admin Route Error:', err); res.status(500).json({ error: err.message }); }
 });
 
 
@@ -433,6 +437,7 @@ router.put('/settings', async (req, res) => {
     }
     res.json({ success: true });
   } catch (err) {
+    console.error('Admin Route Error:', err);
     res.status(500).json({ error: err.message });
   }
 });
@@ -457,6 +462,7 @@ router.put('/kiosk-settings', async (req, res) => {
     }
     res.json({ success: true });
   } catch (err) {
+    console.error('Admin Route Error:', err);
     res.status(500).json({ error: err.message });
   }
 });

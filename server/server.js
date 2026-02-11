@@ -3,6 +3,7 @@ const cors = require('cors');
 const http = require('http');
 const { Server } = require('socket.io');
 const dotenv = require('dotenv');
+dotenv.config();
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
 
@@ -11,7 +12,7 @@ const queueRoutes = require('./routes/queueRoutes');
 const adminRoutes = require('./routes/adminRoutes');
 const authRoutes = require('./routes/authRoutes');
 
-dotenv.config();
+
 
 const app = express();
 const server = http.createServer(app);
