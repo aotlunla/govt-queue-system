@@ -16,7 +16,7 @@ const pool = mysql.createPool({
   enableKeepAlive: true,
   keepAliveInitialDelay: 0,
   ssl: process.env.NODE_ENV === 'production'
-    ? { rejectUnauthorized: true }
+    ? { rejectUnauthorized: false }
     : false
 });
 
