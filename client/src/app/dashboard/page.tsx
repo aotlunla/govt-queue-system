@@ -227,7 +227,7 @@ export default function DashboardSelect() {
           <p className="text-slate-400 text-base font-medium">กรุณาติดต่อผู้ดูแลระบบเพื่อตั้งค่าข้อมูลพื้นฐาน</p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 md:gap-8">
+        <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6">
           {depts.map((dept, index) => {
             const deptCounters = counters.filter(c => c.department_id === dept.id);
             const pastelClass = PASTEL_BG[index % PASTEL_BG.length];
@@ -238,21 +238,21 @@ export default function DashboardSelect() {
                 className={`group clay-card clay-card-hover flex flex-col overflow-hidden animate-in fade-in slide-in-from-bottom-8 fill-mode-backwards ${pastelClass}`}
                 style={{ animationDelay: `${index * 100}ms` }}
               >
-                <div className="p-8 pb-6 border-b border-white/40">
-                  <div className="flex items-start justify-between mb-6">
-                    <div className="w-20 h-20 bg-white/80 backdrop-blur-sm text-[#e72289] rounded-[1.5rem] flex items-center justify-center shadow-[inset_0_2px_4px_rgba(255,255,255,0.5),0_8px_16px_rgba(231,34,137,0.1)] group-hover:scale-110 group-hover:rotate-3 transition-all duration-500">
-                      <Building2 size={36} className="stroke-[1.5]" />
+                <div className="p-5 pb-4 border-b border-white/40">
+                  <div className="flex items-start justify-between mb-4">
+                    <div className="w-14 h-14 bg-white/80 backdrop-blur-sm text-[#e72289] rounded-[1.2rem] flex items-center justify-center shadow-[inset_0_2px_4px_rgba(255,255,255,0.5),0_8px_16px_rgba(231,34,137,0.1)] group-hover:scale-110 group-hover:rotate-3 transition-all duration-500">
+                      <Building2 size={26} className="stroke-[1.5]" />
                     </div>
                     <div className="flex items-center gap-2">
-                      <span className={`px-4 py-2 bg-white/60 backdrop-blur-md text-slate-600 text-[11px] font-bold rounded-xl tracking-wider uppercase shadow-sm border border-white/50 ${GeistMono.className}`}>
+                      <span className={`px-3 py-1.5 bg-white/60 backdrop-blur-md text-slate-600 text-[10px] font-bold rounded-lg tracking-wider uppercase shadow-sm border border-white/50 ${GeistMono.className}`}>
                         {dept.code}
                       </span>
-                      <span className={`px-4 py-2 backdrop-blur-md text-[11px] font-bold rounded-xl tracking-wider uppercase shadow-sm border ${Number(dept.waiting_count || 0) > 0 ? 'bg-amber-100/60 text-amber-600 border-amber-100/50' : 'bg-slate-100/60 text-slate-400 border-slate-100/50'} ${GeistMono.className}`}>
+                      <span className={`px-3 py-1.5 backdrop-blur-md text-[10px] font-bold rounded-lg tracking-wider uppercase shadow-sm border ${Number(dept.waiting_count || 0) > 0 ? 'bg-amber-100/60 text-amber-600 border-amber-100/50' : 'bg-slate-100/60 text-slate-400 border-slate-100/50'} ${GeistMono.className}`}>
                         {Number(dept.waiting_count || 0)} คิวรอ
                       </span>
                     </div>
                   </div>
-                  <h3 className="text-3xl font-black text-slate-800 leading-tight group-hover:text-[#e72289] transition-colors duration-300 drop-shadow-sm">
+                  <h3 className="text-xl font-black text-slate-800 leading-tight group-hover:text-[#e72289] transition-colors duration-300 drop-shadow-sm">
                     {dept.name}
                   </h3>
                   <div className="flex items-center gap-4 mt-3 text-slate-500 text-sm font-bold opacity-80">
@@ -263,7 +263,7 @@ export default function DashboardSelect() {
                   </div>
                 </div>
 
-                <div className="p-6 flex-1 flex flex-col">
+                <div className="p-4 flex-1 flex flex-col">
                   {deptCounters.length > 0 ? (
                     <div className="space-y-4">
                       <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-4 pl-2 flex items-center gap-2 opacity-60">
