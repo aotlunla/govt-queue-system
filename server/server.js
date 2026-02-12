@@ -11,6 +11,8 @@ const rateLimit = require('express-rate-limit');
 const queueRoutes = require('./routes/queueRoutes');
 const adminRoutes = require('./routes/adminRoutes');
 const authRoutes = require('./routes/authRoutes');
+const licenseRoutes = require('./routes/licenseRoutes');
+const { licenseMiddleware } = require('./middleware/licenseMiddleware');
 
 
 
@@ -89,9 +91,11 @@ app.use((req, res, next) => {
   next();
 });
 
-// =======================
-// Routes (เส้นทาง API)
-// =======================
+// 0. License API (must be BEFORE license middleware)
+app.use('/api/license', licenseRoutes);
+
+// License Check Middleware (blocks all other API if not licensed)
+app.use(licenseMiddleware);
 
 // 1. API ระบบคิว (กดบัตร, ย้ายสถานะ, หน้าจอจนท.)
 app.use('/api/queues', queueRoutes);
