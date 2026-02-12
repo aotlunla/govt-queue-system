@@ -1,36 +1,28 @@
-// create_license_columns.js — Add license columns to system_settings
 const db = require('./config/db');
+
+async function addCol(table, colDef) {
+    try {
+        await db.query(`ALTER TABLE ${table} ADD COLUMN ${colDef}`);
+        console.log(`✅ Added column: ${colDef.split(' ')[0]}`);
+    } catch (err) {
+        // Error 1060: Duplicate column name
+        if (err.errno === 1060 || err.code === 'ER_DUP_FIELDNAME') {
+            console.log(`ℹ️ Column ${colDef.split(' ')[0]} already exists.`);
+        } else {
+            console.error(`❌ Failed to add column ${colDef.split(' ')[0]}:`, err.message);
+        }
+    }
+}
 
 async function addLicenseColumns() {
     try {
         console.log('Adding license columns to system_settings...');
 
-        // Add serial_key column
-        await db.query(`
-            ALTER TABLE system_settings
-            ADD COLUMN IF NOT EXISTS serial_key VARCHAR(50) DEFAULT NULL
-        `).catch(() => {
-            // Column might already exist
-            console.log('ℹ️ serial_key column may already exist, skipping...');
-        });
+        await addCol('system_settings', 'serial_key VARCHAR(50) DEFAULT NULL');
+        await addCol('system_settings', 'licensed_domain VARCHAR(255) DEFAULT NULL');
+        await addCol('system_settings', 'license_activated_at TIMESTAMP NULL');
 
-        // Add licensed_domain column
-        await db.query(`
-            ALTER TABLE system_settings
-            ADD COLUMN IF NOT EXISTS licensed_domain VARCHAR(255) DEFAULT NULL
-        `).catch(() => {
-            console.log('ℹ️ licensed_domain column may already exist, skipping...');
-        });
-
-        // Add license_activated_at column
-        await db.query(`
-            ALTER TABLE system_settings
-            ADD COLUMN IF NOT EXISTS license_activated_at TIMESTAMP NULL
-        `).catch(() => {
-            console.log('ℹ️ license_activated_at column may already exist, skipping...');
-        });
-
-        console.log('✅ License columns added successfully!');
+        console.log('✅ Migration completed!');
         process.exit(0);
     } catch (err) {
         console.error('❌ Error:', err);

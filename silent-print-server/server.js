@@ -20,7 +20,8 @@ app.post('/print', async (req, res) => {
         await ptp.print(filePath, {
             printer: "XP-80C",
             orientation: "portrait",
-            monochrome: true
+            monochrome: true,
+            scale: "fit"
         });
 
         res.send({ status: "Success" });
