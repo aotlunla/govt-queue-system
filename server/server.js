@@ -42,11 +42,11 @@ app.use(helmet({
   contentSecurityPolicy: {
     directives: {
       defaultSrc: ["'self'"],
-      scriptSrc: ["'self'", "'unsafe-inline'", "https://challenges.cloudflare.com", "https://mlicense.vercel.app"],
+      scriptSrc: ["'self'", "'unsafe-inline'", "https://challenges.cloudflare.com", "https://mlicense.vercel.app", "http://localhost:5555"],
       styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
       fontSrc: ["'self'", "https://fonts.gstatic.com"],
       imgSrc: ["'self'", "data:", "blob:"],
-      connectSrc: ["'self'", allowedOrigin, "ws:", "wss:", "https://challenges.cloudflare.com", "https://mlicense.vercel.app"],
+      connectSrc: ["'self'", allowedOrigin, "ws:", "wss:", "https://challenges.cloudflare.com", "https://mlicense.vercel.app", "http://localhost:5555"],
       frameSrc: ["'self'", "https://challenges.cloudflare.com"]
     }
   },
@@ -95,7 +95,7 @@ app.use((req, res, next) => {
 app.use('/api/license', licenseRoutes);
 
 // License Check Middleware (blocks all other API if not licensed)
-app.use(licenseMiddleware);
+// app.use(licenseMiddleware); // DISABLED: We use client-side script only now
 
 // 1. API ระบบคิว (กดบัตร, ย้ายสถานะ, หน้าจอจนท.)
 app.use('/api/queues', queueRoutes);
