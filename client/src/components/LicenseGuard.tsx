@@ -3,6 +3,7 @@
 import { useEffect } from 'react';
 
 export function LicenseGuard({ children }: { children: React.ReactNode }) {
+    console.log('LicenseGuard: Component Rendering');
     useEffect(() => {
         const scriptUrl = process.env.NEXT_PUBLIC_LICENSE_SCRIPT_URL || "https://mlicense.vercel.app/license.js";
 
