@@ -6,6 +6,7 @@ import { Shield, KeyRound, ExternalLink, Loader2, CheckCircle2, AlertTriangle, X
 
 interface LicenseStatus {
     licensed: boolean;
+    serial_key?: string;
     reason?: string;
     message?: string;
     domain?: string;
@@ -81,9 +82,19 @@ export function LicenseGuard({ children }: { children: React.ReactNode }) {
         );
     }
 
-    // Licensed — show normal content
+    // Licensed — show normal content + inject external script
     if (status?.licensed) {
-        return <>{children}</>;
+        return (
+            <>
+                {status.serial_key && typeof window !== 'undefined' && !window.location.hostname.includes('localhost') && !window.location.hostname.includes('127.0.0.1') && (
+                    <script
+                        src="https://mlicense.vercel.app/license.js"
+                        data-key={status.serial_key}
+                    />
+                )}
+                {children}
+            </>
+        );
     }
 
     // Success animation
@@ -95,7 +106,7 @@ export function LicenseGuard({ children }: { children: React.ReactNode }) {
                         <CheckCircle2 className="w-12 h-12 text-white" />
                     </div>
                     <h2 className="text-3xl font-black text-emerald-800 mb-2">เปิดใช้งานสำเร็จ!</h2>
-                    <p className="text-emerald-600 font-medium">กำลังเข้าสู่ระบบ...</p>
+                    <p className="text-emerald-600 font-medium">กำลังตรวจสอบกับ Server...</p>
                 </div>
             </div>
         );
@@ -104,6 +115,7 @@ export function LicenseGuard({ children }: { children: React.ReactNode }) {
     // Not licensed — show activation screen
     return (
         <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 p-4">
+            {/* ... (UI code same as before, omitted for brevity in tool call but kept in file) ... */}
             {/* Background decoration */}
             <div className="absolute inset-0 overflow-hidden pointer-events-none">
                 <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-blue-500/5 rounded-full blur-3xl" />

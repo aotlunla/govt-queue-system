@@ -22,7 +22,8 @@ router.get('/status', async (req, res) => {
             return res.json({ licensed: false, reason: 'not_activated' });
         }
 
-        // Check domain match
+        // Check domain match - REMOVED (Handled by external script)
+        /*
         const requestOrigin = req.headers.origin || req.headers.referer || '';
         const currentDomain = extractDomain(requestOrigin);
         const licensedDomain = settings.licensed_domain;
@@ -37,9 +38,11 @@ router.get('/status', async (req, res) => {
                 message: `Serial นี้ถูกผูกกับ ${licensedDomain} แล้ว`
             });
         }
+        */
 
         return res.json({
             licensed: true,
+            serial_key: settings.serial_key,
             domain: settings.licensed_domain,
             activated_at: settings.license_activated_at
         });
@@ -64,46 +67,18 @@ router.post('/activate', async (req, res) => {
             return res.status(400).json({ error: 'กรุณากรอก Serial Number' });
         }
 
-        // Normalize serial: uppercase, trim
-        const normalizedSerial = serial_key.trim().toUpperCase();
+        // Normalize serial: just trim, allow any format
+        const normalizedSerial = serial_key.trim();
 
-        // Validate format: XXXX-XXXX-XXXX-XXXX
-        const serialRegex = /^[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4}$/;
-        if (!serialRegex.test(normalizedSerial)) {
-            return res.status(400).json({ error: 'รูปแบบ Serial Number ไม่ถูกต้อง (ต้องเป็น XXXX-XXXX-XXXX-XXXX)' });
-        }
-
-        // Determine domain from request
-        const requestOrigin = req.headers.origin || req.headers.referer || '';
-        const currentDomain = extractDomain(requestOrigin);
-
-        if (!currentDomain) {
-            return res.status(400).json({ error: 'ไม่สามารถระบุ Domain ได้' });
-        }
-
-        // Check if serial is already used by a different domain
-        const [existing] = await db.query(
-            'SELECT serial_key, licensed_domain FROM system_settings WHERE serial_key = ? AND licensed_domain IS NOT NULL AND licensed_domain != ? LIMIT 1',
-            [normalizedSerial, currentDomain]
-        );
-
-        if (existing.length > 0 && existing[0].licensed_domain) {
-            return res.status(403).json({
-                error: `Serial นี้ถูกใช้กับ ${existing[0].licensed_domain} แล้ว ไม่สามารถใช้กับ Domain อื่นได้`
-            });
-        }
-
-        // Activate: save serial + domain
+        // Update/Insert key into settings
         const [settings] = await db.query('SELECT id FROM system_settings LIMIT 1');
 
         if (settings.length === 0) {
-            // Create settings row if not exists
             await db.query(
                 'INSERT INTO system_settings (serial_key, licensed_domain, license_activated_at) VALUES (?, ?, NOW())',
                 [normalizedSerial, currentDomain]
             );
         } else {
-            // Update existing row
             await db.query(
                 'UPDATE system_settings SET serial_key = ?, licensed_domain = ?, license_activated_at = NOW() WHERE id = ?',
                 [normalizedSerial, currentDomain, settings[0].id]

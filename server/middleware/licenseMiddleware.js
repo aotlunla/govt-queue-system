@@ -52,7 +52,8 @@ const licenseMiddleware = async (req, res, next) => {
             });
         }
 
-        // License exists — check domain
+        // License exists — check domain - REMOVED (Handled by external script)
+        /*
         const requestOrigin = req.headers.origin || req.headers.referer || '';
         const currentDomain = extractDomain(requestOrigin);
         const licensedDomain = rows[0].licensed_domain;
@@ -65,9 +66,10 @@ const licenseMiddleware = async (req, res, next) => {
                 message: `Serial นี้ถูกผูกกับ ${licensedDomain} ไม่สามารถใช้กับ Domain นี้ได้`
             });
         }
+        */
 
         // All good — cache and continue
-        licenseCache = { licensed: true, domain: licensedDomain, checkedAt: now };
+        licenseCache = { licensed: true, domain: rows[0].licensed_domain, checkedAt: now };
         return next();
     } catch (err) {
         // If columns don't exist yet (first deploy), allow through
