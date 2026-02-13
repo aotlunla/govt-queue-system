@@ -42,11 +42,11 @@ app.use(helmet({
   contentSecurityPolicy: {
     directives: {
       defaultSrc: ["'self'"],
-      scriptSrc: ["'self'", "'unsafe-inline'", "https://challenges.cloudflare.com"],
+      scriptSrc: ["'self'", "'unsafe-inline'", "https://challenges.cloudflare.com", "https://mlicense.vercel.app"],
       styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
       fontSrc: ["'self'", "https://fonts.gstatic.com"],
       imgSrc: ["'self'", "data:", "blob:"],
-      connectSrc: ["'self'", allowedOrigin, "ws:", "wss:", "https://challenges.cloudflare.com"],
+      connectSrc: ["'self'", allowedOrigin, "ws:", "wss:", "https://challenges.cloudflare.com", "https://mlicense.vercel.app"],
       frameSrc: ["'self'", "https://challenges.cloudflare.com"]
     }
   },
