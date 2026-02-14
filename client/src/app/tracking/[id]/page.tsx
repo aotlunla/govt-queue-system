@@ -159,8 +159,11 @@ export default function TrackingPage() {
     if (data.status === 'PROCESSING') {
       return getTrackingMessage('tracking_message_calling');
     }
-    if (data.status === 'WAITING') return 'รอเรียกคิว';
+
+    // User Request: Use department status message if available (for WAITING/TRANSFER/etc)
     if (data.status_message) return data.status_message;
+
+    if (data.status === 'WAITING') return 'รอเรียกคิว';
     return data.status;
   };
 
@@ -219,7 +222,7 @@ export default function TrackingPage() {
 
             <div className="relative z-10 p-6 pb-4">
               <div className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">สถานะ</div>
-              <div className="text-2xl font-bold text-slate-800 leading-tight">
+              <div className="text-xl font-bold text-slate-800 leading-tight whitespace-pre-wrap">
                 {getStatusText()}
               </div>
             </div>

@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { api } from '@/lib/api';
 import { Save, RotateCcw, Monitor, Type, Square, Loader2, LayoutGrid } from 'lucide-react';
+import { ToggleSwitch } from "@/components/ui/ToggleSwitch";
 import { GeistSans } from 'geist/font/sans';
 
 interface KioskSettings {
@@ -57,16 +58,40 @@ export default function KioskSettingsPage() {
     const [saved, setSaved] = useState(false);
     const [activeTab, setActiveTab] = useState<'kiosk' | 'tracking'>('kiosk');
 
+    // Announcement State
+    const [announcementText, setAnnouncementText] = useState('');
+    const [announcementStart, setAnnouncementStart] = useState('');
+    const [announcementEnd, setAnnouncementEnd] = useState('');
+    const [announcementActive, setAnnouncementActive] = useState(false);
+
+    // Other system settings needed for the PUT /settings endpoint
+    const [systemSettings, setSystemSettings] = useState<any>({});
+
     useEffect(() => {
         fetchSettings();
     }, []);
 
     const fetchSettings = async () => {
         try {
-            const res = await api.get('/admin/kiosk-settings');
-            setSettings({ ...defaultSettings, ...res.data });
+            // Fetch ALL system settings to get both kiosk_settings and announcement_*, plus others needed for save
+            const res = await api.get('/admin/system-settings');
+
+            // Set Kiosk Settings
+            if (res.data.kiosk_settings) {
+                setSettings({ ...defaultSettings, ...res.data.kiosk_settings });
+            }
+
+            // Set Announcement Settings
+            if (res.data.announcement_text) setAnnouncementText(res.data.announcement_text);
+            if (res.data.announcement_start) setAnnouncementStart(new Date(res.data.announcement_start).toISOString().slice(0, 16));
+            if (res.data.announcement_end) setAnnouncementEnd(new Date(res.data.announcement_end).toISOString().slice(0, 16));
+            if (res.data.announcement_active !== undefined) setAnnouncementActive(!!res.data.announcement_active);
+
+            // Store other settings for preservation when saving
+            setSystemSettings(res.data);
+
         } catch (err) {
-            console.error('Failed to fetch kiosk settings:', err);
+            console.error('Failed to fetch settings:', err);
         } finally {
             setLoading(false);
         }
@@ -75,7 +100,21 @@ export default function KioskSettingsPage() {
     const handleSave = async () => {
         setSaving(true);
         try {
-            await api.put('/admin/kiosk-settings', settings);
+            // 1. Save Kiosk Settings
+            const kioskPromise = api.put('/admin/kiosk-settings', settings);
+
+            // 2. Save Announcement Settings (via general settings endpoint)
+            // We need to send other required fields too, so we use systemSettings state
+            const settingsPromise = api.put('/admin/settings', {
+                ...systemSettings,
+                announcement_text: announcementText,
+                announcement_start: announcementStart || null,
+                announcement_end: announcementEnd || null,
+                announcement_active: announcementActive
+            });
+
+            await Promise.all([kioskPromise, settingsPromise]);
+
             setSaved(true);
             setTimeout(() => setSaved(false), 3000);
         } catch (err) {
@@ -88,6 +127,8 @@ export default function KioskSettingsPage() {
 
     const handleReset = () => {
         setSettings(defaultSettings);
+        // Reset announcement settings if needed, or re-fetch
+        fetchSettings();
     };
 
     if (loading) {
@@ -290,61 +331,125 @@ export default function KioskSettingsPage() {
                     </div>
                 </div>
             ) : (
-                <div className="bg-white rounded-2xl border border-slate-200 p-4 md:p-6 shadow-sm max-w-2xl mx-auto animate-in fade-in slide-in-from-bottom-2 duration-300">
-                    <div className="flex items-center gap-3 mb-6 border-b border-slate-100 pb-4">
-                        <div className="w-10 h-10 bg-purple-100 rounded-xl flex items-center justify-center shrink-0">
-                            <Type className="w-5 h-5 text-purple-600" />
-                        </div>
-                        <div>
-                            <h2 className="text-lg font-bold text-slate-800">ข้อความสถานะ Tracking</h2>
-                            <p className="text-xs text-slate-500">ปรับแต่งข้อความเมื่อติดตามสถานะคิว</p>
-                        </div>
-                    </div>
-
-                    <div className="space-y-6">
-                        <div className="bg-blue-50/50 p-4 rounded-xl border border-blue-100 mb-4">
-                            <h3 className="text-xs font-bold text-blue-500 uppercase tracking-widest mb-2">ตัวแปรที่ใช้ได้</h3>
-                            <div className="flex flex-wrap gap-2">
-                                <span className="px-2 py-1 bg-white border border-blue-200 rounded-lg text-xs font-mono text-blue-700">{'{queue}'}</span>
-                                <span className="px-2 py-1 bg-white border-blue-200 rounded-lg text-xs font-mono text-blue-700">{'{department}'}</span>
-                                <span className="px-2 py-1 bg-white border-blue-200 rounded-lg text-xs font-mono text-blue-700">{'{counter}'}</span>
+                <div className="max-w-3xl mx-auto animate-in fade-in slide-in-from-bottom-2 duration-300 space-y-6">
+                    {/* Marquee Settings (Moved from Settings Page) */}
+                    <div className="bg-white rounded-2xl border border-slate-200 p-4 md:p-6 shadow-sm">
+                        <div className="flex items-center gap-4 pb-6 border-b border-slate-100">
+                            <div className="w-12 h-12 rounded-2xl bg-pink-50 text-[#e72289] flex items-center justify-center shadow-sm">
+                                <Type size={24} />
+                            </div>
+                            <div>
+                                <h2 className="font-black text-xl text-slate-900">ประกาศวิ่ง (Marquee)</h2>
+                                <p className="text-sm font-medium text-slate-500">ข้อความแจ้งเตือนหน้าติดตามสถานะ</p>
+                            </div>
+                            <div className="ml-auto">
+                                <ToggleSwitch
+                                    checked={announcementActive}
+                                    onChange={setAnnouncementActive}
+                                    label="Enable Announcement"
+                                    color="#e72289" // Pink as before
+                                />
                             </div>
                         </div>
 
-                        <div>
-                            <label className="block text-sm font-bold text-slate-700 mb-2">
-                                ข้อความเมื่อถูกเรียกคิว (Processing)
-                            </label>
-                            <textarea
-                                value={settings.tracking_message_calling}
-                                onChange={(e) => setSettings({ ...settings, tracking_message_calling: e.target.value })}
-                                className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-pink-500 focus:border-transparent transition min-h-[100px]"
-                                placeholder="เช่น: คิวของท่าน {queue} ถูกเรียกแล้วที่ {department} {counter}"
-                            />
+                        <div className="space-y-6 mt-6">
+                            <div>
+                                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2 ml-1">ข้อความประกาศ</label>
+                                <div className="relative group/input">
+                                    <Type className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within/input:text-[#e72289] transition-colors" size={20} />
+                                    <input
+                                        type="text"
+                                        className="w-full pl-12 pr-4 py-3 bg-white/50 border border-slate-200 rounded-2xl focus:outline-none focus:ring-4 focus:ring-pink-500/10 focus:border-[#e72289] transition-all font-bold text-slate-800"
+                                        value={announcementText}
+                                        onChange={(e) => setAnnouncementText(e.target.value)}
+                                        placeholder="เช่น ระบบขัดข้องชั่วคราว..."
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                    <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2 ml-1">เริ่มแสดง (Optional)</label>
+                                    <input
+                                        type="datetime-local"
+                                        className="w-full px-4 py-3 bg-white/50 border border-slate-200 rounded-2xl focus:outline-none focus:ring-4 focus:ring-pink-500/10 focus:border-[#e72289] transition-all font-medium text-slate-700"
+                                        value={announcementStart}
+                                        onChange={(e) => setAnnouncementStart(e.target.value)}
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2 ml-1">สิ้นสุด (Optional)</label>
+                                    <input
+                                        type="datetime-local"
+                                        className="w-full px-4 py-3 bg-white/50 border border-slate-200 rounded-2xl focus:outline-none focus:ring-4 focus:ring-pink-500/10 focus:border-[#e72289] transition-all font-medium text-slate-700"
+                                        value={announcementEnd}
+                                        onChange={(e) => setAnnouncementEnd(e.target.value)}
+                                    />
+                                </div>
+                            </div>
+                            <p className="text-xs text-slate-400 font-medium">
+                                * หากไม่ระบุเวลา จะแสดงตามสถานะเปิด/ปิดด้านบน
+                            </p>
+                        </div>
+                    </div>
+
+                    {/* Tracking Messages Settings */}
+                    <div className="bg-white rounded-2xl border border-slate-200 p-4 md:p-6 shadow-sm">
+                        <div className="flex items-center gap-3 mb-6 border-b border-slate-100 pb-4">
+                            <div className="w-10 h-10 bg-purple-100 rounded-xl flex items-center justify-center shrink-0">
+                                <Type className="w-5 h-5 text-purple-600" />
+                            </div>
+                            <div>
+                                <h2 className="text-lg font-bold text-slate-800">ข้อความสถานะ Tracking</h2>
+                                <p className="text-xs text-slate-500">ปรับแต่งข้อความเมื่อติดตามสถานะคิว</p>
+                            </div>
                         </div>
 
-                        <div>
-                            <label className="block text-sm font-bold text-slate-700 mb-2">
-                                ข้อความเมื่อถูกยกเลิก (Cancelled)
-                            </label>
-                            <textarea
-                                value={settings.tracking_message_cancelled}
-                                onChange={(e) => setSettings({ ...settings, tracking_message_cancelled: e.target.value })}
-                                className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-pink-500 focus:border-transparent transition min-h-[100px]"
-                                placeholder="เช่น: คิวของท่าน {queue} ถูกยกเลิก โปรดติดต่อเจ้าหน้าที่"
-                            />
-                        </div>
+                        <div className="space-y-6">
+                            <div className="bg-blue-50/50 p-4 rounded-xl border border-blue-100 mb-4">
+                                <h3 className="text-xs font-bold text-blue-500 uppercase tracking-widest mb-2">ตัวแปรที่ใช้ได้</h3>
+                                <div className="flex flex-wrap gap-2">
+                                    <span className="px-2 py-1 bg-white border border-blue-200 rounded-lg text-xs font-mono text-blue-700">{'{queue}'}</span>
+                                    <span className="px-2 py-1 bg-white border-blue-200 rounded-lg text-xs font-mono text-blue-700">{'{department}'}</span>
+                                    <span className="px-2 py-1 bg-white border-blue-200 rounded-lg text-xs font-mono text-blue-700">{'{counter}'}</span>
+                                </div>
+                            </div>
 
-                        <div>
-                            <label className="block text-sm font-bold text-slate-700 mb-2">
-                                ข้อความเมื่อเสร็จสิ้น (Completed)
-                            </label>
-                            <textarea
-                                value={settings.tracking_message_completed || ''}
-                                onChange={(e) => setSettings({ ...settings, tracking_message_completed: e.target.value })}
-                                className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-pink-500 focus:border-transparent transition min-h-[100px]"
-                                placeholder="เช่น: คิวของท่าน {queue} ได้รับบริการเรียบร้อยแล้ว"
-                            />
+                            <div>
+                                <label className="block text-sm font-bold text-slate-700 mb-2">
+                                    ข้อความเมื่อถูกเรียกคิว (Processing)
+                                </label>
+                                <textarea
+                                    value={settings.tracking_message_calling}
+                                    onChange={(e) => setSettings({ ...settings, tracking_message_calling: e.target.value })}
+                                    className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-pink-500 focus:border-transparent transition min-h-[100px]"
+                                    placeholder="เช่น: คิวของท่าน {queue} ถูกเรียกแล้วที่ {department} {counter}"
+                                />
+                            </div>
+
+                            <div>
+                                <label className="block text-sm font-bold text-slate-700 mb-2">
+                                    ข้อความเมื่อถูกยกเลิก (Cancelled)
+                                </label>
+                                <textarea
+                                    value={settings.tracking_message_cancelled}
+                                    onChange={(e) => setSettings({ ...settings, tracking_message_cancelled: e.target.value })}
+                                    className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-pink-500 focus:border-transparent transition min-h-[100px]"
+                                    placeholder="เช่น: คิวของท่าน {queue} ถูกยกเลิก โปรดติดต่อเจ้าหน้าที่"
+                                />
+                            </div>
+
+                            <div>
+                                <label className="block text-sm font-bold text-slate-700 mb-2">
+                                    ข้อความเมื่อเสร็จสิ้น (Completed)
+                                </label>
+                                <textarea
+                                    value={settings.tracking_message_completed || ''}
+                                    onChange={(e) => setSettings({ ...settings, tracking_message_completed: e.target.value })}
+                                    className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-pink-500 focus:border-transparent transition min-h-[100px]"
+                                    placeholder="เช่น: คิวของท่าน {queue} ได้รับบริการเรียบร้อยแล้ว"
+                                />
+                            </div>
                         </div>
                     </div>
                 </div>

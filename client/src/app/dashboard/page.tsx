@@ -17,6 +17,7 @@ interface Department {
   name: string;
   code: string;
   waiting_count: number;
+  processing_count: number;
 }
 
 interface Counter {
@@ -155,6 +156,11 @@ export default function DashboardSelect() {
 
   return (
     <div className={`animate-in fade-in slide-in-from-bottom-4 duration-700 ${GeistSans.className}`}>
+      {/* Mobile Search Bar */}
+      <div className="md:hidden w-full mb-8 relative z-30 px-2">
+        <QueueSearch />
+      </div>
+
       {/* Hero Section */}
       <div className="text-center mb-16">
         <div className="inline-flex items-center gap-2 px-5 py-2.5 bg-white/60 backdrop-blur-xl border border-white/40 rounded-full text-slate-500 text-xs font-bold shadow-sm mb-8">
@@ -227,7 +233,7 @@ export default function DashboardSelect() {
           <p className="text-slate-400 text-base font-medium">กรุณาติดต่อผู้ดูแลระบบเพื่อตั้งค่าข้อมูลพื้นฐาน</p>
         </div>
       ) : (
-        <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6">
           {depts.map((dept, index) => {
             const deptCounters = counters.filter(c => c.department_id === dept.id);
             const pastelClass = PASTEL_BG[index % PASTEL_BG.length];
@@ -247,8 +253,8 @@ export default function DashboardSelect() {
                       <span className={`px-3 py-1.5 bg-white/60 backdrop-blur-md text-slate-600 text-[10px] font-bold rounded-lg tracking-wider uppercase shadow-sm border border-white/50 ${GeistMono.className}`}>
                         {dept.code}
                       </span>
-                      <span className={`px-3 py-1.5 backdrop-blur-md text-[10px] font-bold rounded-lg tracking-wider uppercase shadow-sm border ${Number(dept.waiting_count || 0) > 0 ? 'bg-amber-100/60 text-amber-600 border-amber-100/50' : 'bg-slate-100/60 text-slate-400 border-slate-100/50'} ${GeistMono.className}`}>
-                        {Number(dept.waiting_count || 0)} คิวรอ
+                      <span className={`px-3 py-1.5 backdrop-blur-md text-[10px] font-bold rounded-lg tracking-wider uppercase shadow-sm border ${Number(dept.waiting_count || 0) > 0 || Number(dept.processing_count || 0) > 0 ? 'bg-amber-100/60 text-amber-600 border-amber-100/50' : 'bg-slate-100/60 text-slate-400 border-slate-100/50'} ${GeistMono.className}`}>
+                        รอ {Number(dept.waiting_count || 0)} / เรียก {Number(dept.processing_count || 0)}
                       </span>
                     </div>
                   </div>

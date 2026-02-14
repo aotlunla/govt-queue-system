@@ -139,6 +139,17 @@ async function startServer() {
     console.error('⚠️ Auto-Migration Warning:', err.message);
   }
 
+  // Health Check Endpoint (For Frontend Overlay)
+  app.get('/api/health', async (req, res) => {
+    try {
+      await db.query('SELECT 1');
+      res.json({ status: 'ok', timestamp: new Date() });
+    } catch (err) {
+      console.error('❌ Health Check Failed:', err.message);
+      res.status(503).json({ status: 'error', message: 'Database connection failed' });
+    }
+  });
+
   server.listen(PORT, () => {
     console.log(`✅ Server running on port ${PORT}`);
     console.log(`   - Frontend Access: http://localhost:3000`);

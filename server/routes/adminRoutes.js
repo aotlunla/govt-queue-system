@@ -199,7 +199,8 @@ router.get('/departments', async (req, res) => {
   try {
     const [rows] = await db.query(`
       SELECT d.*, 
-      (SELECT COUNT(*) FROM queues q WHERE q.current_department_id = d.id AND q.status = 'WAITING' AND DATE(q.created_at) = CURDATE()) as waiting_count 
+      (SELECT COUNT(*) FROM queues q WHERE q.current_department_id = d.id AND q.status = 'WAITING' AND DATE(q.created_at) = CURDATE()) as waiting_count,
+      (SELECT COUNT(*) FROM queues q WHERE q.current_department_id = d.id AND q.status = 'PROCESSING' AND DATE(q.created_at) = CURDATE()) as processing_count
       FROM departments d 
       WHERE d.is_active = 1 
       ORDER BY d.sort_order

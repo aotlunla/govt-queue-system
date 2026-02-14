@@ -51,8 +51,9 @@ export function DashboardHeader({
     return (
         <>
             <header className={`fixed top-2 md:top-4 z-50 left-2 right-2 md:left-4 md:right-4 rounded-2xl bg-white/80 backdrop-blur-2xl border border-white/40 shadow-xl shadow-slate-200/40 transition-all duration-300 ${!fullWidth ? 'max-w-7xl mx-auto' : ''} ${className} ${GeistSans.className}`}>
-                <div className={`${fullWidth ? 'w-full px-3 md:px-6' : 'max-w-7xl mx-auto px-3 md:px-6'} h-16 md:h-20 flex justify-between items-center gap-3 md:gap-4`}>
-                    <div className="flex items-center gap-3 md:gap-4 shrink-0">
+                <div className={`${fullWidth ? 'w-full px-3 md:px-6' : 'max-w-7xl mx-auto px-3 md:px-6'} h-16 md:h-20 flex justify-between items-center gap-3 md:gap-4 relative`}>
+                    {/* Left: Brand / Title */}
+                    <div className="flex items-center gap-3 md:gap-4 shrink-0 relative z-10">
                         {leftIcon}
                         <div>
                             <h1 className="font-black text-lg md:text-xl text-slate-900 tracking-tight leading-none">{title}</h1>
@@ -64,7 +65,7 @@ export function DashboardHeader({
                     {adminMenu ? (
                         <>
                             {/* Desktop Menu */}
-                            <nav className="hidden lg:flex items-center gap-1 p-1.5 bg-slate-100/50 rounded-2xl border border-slate-200/50">
+                            <nav className="hidden lg:flex items-center gap-1 p-1.5 bg-slate-100/50 rounded-2xl border border-slate-200/50 absolute left-1/2 -translate-x-1/2">
                                 {adminLinks.map((link) => {
                                     const isActive = pathname === link.href;
                                     const Icon = link.icon;
@@ -89,14 +90,14 @@ export function DashboardHeader({
                         </>
                     ) : (
                         searchBar && (
-                            <div className="flex-1 max-w-md hidden md:block">
+                            <div className="hidden md:flex absolute left-1/2 -translate-x-1/2 w-full max-w-md items-center justify-center">
                                 {searchBar}
                             </div>
                         )
                     )}
 
                     {/* Right: User Profile & Actions */}
-                    <div className="flex items-center gap-2 md:gap-3 shrink-0">
+                    <div className="flex items-center gap-2 md:gap-3 shrink-0 relative z-10">
                         {adminMenu && (
                             <button
                                 onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}

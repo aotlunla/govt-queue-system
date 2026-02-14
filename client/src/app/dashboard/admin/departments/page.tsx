@@ -355,14 +355,13 @@ export default function DepartmentsPage() {
                                 {/* Status Message Input */}
                                 <div>
                                     <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2 ml-1">ข้อความสถานะ (Optional)</label>
-                                    <input
-                                        type="text"
-                                        className="w-full px-4 py-3 bg-white/50 border border-slate-200 rounded-2xl focus:outline-none focus:ring-4 focus:ring-pink-500/10 focus:border-[#e72289] transition-all font-medium"
-                                        placeholder="เช่น รอเรียกคิวที่ห้องการเงิน"
+                                    <textarea
+                                        className="w-full px-4 py-3 bg-white/50 border border-slate-200 rounded-2xl focus:outline-none focus:ring-4 focus:ring-pink-500/10 focus:border-[#e72289] transition-all font-medium h-24 resize-none"
+                                        placeholder="เช่น รอเรียกคิวที่ห้องการเงิน&#10;โปรดเตรียมบัตรประชาชน"
                                         value={deptForm.status_message || ''}
                                         onChange={(e) => setDeptForm({ ...deptForm, status_message: e.target.value })}
                                     />
-                                    <p className="text-[10px] text-slate-400 mt-1 ml-1 font-medium">* ข้อความนี้จะแสดงในหน้าติดตามสถานะแทนคำว่า "รอเรียกคิว"</p>
+                                    <p className="text-[10px] text-slate-400 mt-1 ml-1 font-medium">* ข้อความนี้จะแสดงในหน้าติดตามสถานะแทนคำว่า "รอเรียกคิว" (รองรับการเว้นบรรทัด)</p>
                                 </div>
 
                                 <div className="pt-4 flex gap-4">

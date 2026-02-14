@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Kanit } from "next/font/google";
 import "./globals.css";
 import { LicenseGuard } from "@/components/LicenseGuard";
+import { ConnectionGuard } from "@/components/ConnectionGuard";
 
 const kanit = Kanit({
   variable: "--font-kanit",
@@ -26,6 +27,7 @@ export default function RootLayout({
         suppressHydrationWarning={true}
         className={`${kanit.variable} antialiased`}
       >
+        <ConnectionGuard />
         <LicenseGuard>
           {children}
         </LicenseGuard>

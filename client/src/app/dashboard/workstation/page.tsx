@@ -6,7 +6,7 @@ import { api, socket } from '@/lib/api';
 import {
     Clock, ArrowRight, User, RefreshCw, Search,
     CheckSquare, Square, History, Send, MapPin, Calendar, Plus,
-    CheckCircle2, XCircle, LayoutGrid, MessageSquarePlus, X, Trash2, Megaphone, ChevronDown, ChevronUp, AlertTriangle, LogOut
+    CheckCircle2, XCircle, LayoutGrid, MessageSquarePlus, X, Trash2, Megaphone, ChevronDown, ChevronUp, AlertTriangle, LogOut, ChevronRight, Loader2
 } from 'lucide-react';
 import { GeistSans } from 'geist/font/sans';
 import { GeistMono } from 'geist/font/mono';
@@ -24,6 +24,8 @@ interface Queue {
     created_at: string;
     updated_at: string;
     remark_count: number;
+    current_department_id?: number;
+    department_name?: string;
 }
 
 interface Log {
@@ -47,6 +49,7 @@ function WorkstationContent() {
     const [departments, setDepartments] = useState<any[]>([]);
     const [counters, setCounters] = useState<any[]>([]);
     const [activeCounterId, setActiveCounterId] = useState<string>(''); // Track active counter
+    const [searchResults, setSearchResults] = useState<Queue[]>([]); // New Global Search State
 
     // UI State
     const [searchTerm, setSearchTerm] = useState('');
@@ -54,6 +57,7 @@ function WorkstationContent() {
     const [focusedQueue, setFocusedQueue] = useState<Queue | null>(null);
     const [queueLogs, setQueueLogs] = useState<Log[]>([]);
     const [loadingLogs, setLoadingLogs] = useState(false);
+    const [loading, setLoading] = useState(false); // Search Loading State
     const [isTimelineOpen, setIsTimelineOpen] = useState(false); // Collapsible Timeline
 
     // Remark Modal State (Add)
@@ -93,6 +97,28 @@ function WorkstationContent() {
         socket.on('queue_update', () => fetchQueues(dId));
         return () => { socket.off('queue_update'); };
     }, []);
+    // 2. Global Search Logic
+    useEffect(() => {
+        if (!searchTerm) {
+            setSearchResults([]);
+            setLoading(false);
+            return;
+        }
+
+        setLoading(true);
+        const delayDebounceFn = setTimeout(async () => {
+            try {
+                const res = await api.get(`/queues/search?q=${searchTerm}`);
+                setSearchResults(res.data);
+            } catch (err) {
+                console.error('Search Error:', err);
+            } finally {
+                setLoading(false);
+            }
+        }, 500);
+
+        return () => clearTimeout(delayDebounceFn);
+    }, [searchTerm]);
 
     // Set Layout
     useEffect(() => {
@@ -112,17 +138,80 @@ function WorkstationContent() {
             leftIcon: <MapPin size={24} />,
             adminMenu: false,
             searchBar: (
-                <div className="relative w-full max-w-md">
+                <div className="relative w-full max-w-md group">
                     <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400">
-                        <Search size={20} />
+                        {loading ? <Loader2 size={20} className="animate-spin" /> : <Search size={20} />}
                     </div>
                     <input
                         type="text"
-                        placeholder="ค้นหาหมายเลขคิว..."
+                        placeholder="ค้นหาหรือดึงคิว (ระบุหมายเลข)..."
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
                         className="w-full h-12 pl-12 pr-4 rounded-xl bg-slate-100/50 border border-slate-200 focus:bg-white focus:border-[#e72289] focus:ring-4 focus:ring-pink-500/10 outline-none transition-all font-bold text-slate-700 placeholder:text-slate-400"
                     />
+
+                    {/* Search Dropdown - ONLY shows External Queues */}
+                    {searchTerm && (
+                        (() => {
+                            const currentDeptId = Number(localStorage.getItem('station_dept_id'));
+                            // Filter out local queues from dropdown (User Request: Show only external)
+                            const externalResults = searchResults.filter(q => q.current_department_id !== currentDeptId);
+
+                            if (externalResults.length === 0) return null; // Hide if no external results
+
+                            return (
+                                <div className="absolute top-full left-0 right-0 mt-2 bg-white rounded-2xl shadow-xl border border-slate-100 overflow-hidden z-50 animate-in fade-in slide-in-from-top-2 duration-200">
+                                    <div className="max-h-[300px] overflow-y-auto py-2">
+                                        {externalResults.map((q) => {
+                                            // Helper for status colors (from QueueSearch.tsx)
+                                            const getStatusColor = (status: string) => {
+                                                switch (status) {
+                                                    case 'WAITING': return 'text-amber-500 bg-amber-50';
+                                                    case 'PROCESSING': return 'text-emerald-500 bg-emerald-50';
+                                                    case 'COMPLETED': return 'text-blue-500 bg-blue-50';
+                                                    case 'CANCELLED': return 'text-rose-500 bg-rose-50';
+                                                    default: return 'text-slate-500 bg-slate-50';
+                                                }
+                                            };
+
+                                            return (
+                                                <div
+                                                    key={q.id}
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        handlePullQueue(q);
+                                                    }}
+                                                    className="w-full px-4 py-3 flex items-center justify-between hover:bg-slate-50 transition-colors group border-b border-slate-50 last:border-0 cursor-pointer"
+                                                >
+                                                    <div className="flex items-center gap-3">
+                                                        <div className={`w-10 h-10 rounded-lg flex items-center justify-center font-black text-sm ${getStatusColor(q.status)}`}>
+                                                            {q.queue_number}
+                                                        </div>
+                                                        <div className="text-left">
+                                                            <div className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-0.5 flex items-center gap-1">
+                                                                <MapPin size={10} />
+                                                                {q.department_name || 'Unknown Dept'}
+                                                            </div>
+                                                            <div className={`text-[10px] font-bold px-2 py-0.5 rounded-full inline-block ${getStatusColor(q.status)}`}>
+                                                                {q.status}
+                                                            </div>
+                                                        </div>
+                                                    </div>
+
+                                                    <button
+                                                        className="px-4 py-2 bg-pink-500 hover:bg-pink-600 text-white text-xs font-bold rounded-xl shadow-md shadow-pink-200 transition-all active:scale-95 flex items-center gap-2"
+                                                    >
+                                                        <span>ดึงคิว</span>
+                                                        <ArrowRight size={14} />
+                                                    </button>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                </div>
+                            );
+                        })()
+                    )}
                 </div>
             ),
             rightContent: (
@@ -144,7 +233,7 @@ function WorkstationContent() {
             ),
             fullWidth: true
         });
-    }, [setLayout, stationName, personnelName, searchTerm, router]);
+    }, [setLayout, stationName, personnelName, searchTerm, searchResults, router]); // Added searchResults dependency
 
     // 2.1 Handle Highlight Queue (from Search)
     useEffect(() => {
@@ -154,11 +243,31 @@ function WorkstationContent() {
             if (targetQueue) {
                 setFocusedQueue(targetQueue);
                 setSelectedIds([targetQueue.id]); // Auto-select the queue
+                fetchLogs(targetQueue.id); // Fetch logs for timeline
                 // Clear param to avoid re-focusing on refresh
                 router.replace('/dashboard/workstation', { scroll: false });
             }
         }
-    }, [queues, searchParams]);
+    }, [queues, searchParams, router]);
+
+    // 2.2 Global Search Effect
+    useEffect(() => {
+        if (!searchTerm) {
+            setSearchResults([]);
+            return;
+        }
+
+        const delayDebounceFn = setTimeout(async () => {
+            try {
+                const res = await api.get(`/queues/search?q=${searchTerm}`);
+                setSearchResults(res.data);
+            } catch (err) {
+                console.error('Search Error:', err);
+            }
+        }, 500);
+
+        return () => clearTimeout(delayDebounceFn);
+    }, [searchTerm]);
 
     // 2. Fetch Data
     const fetchQueues = async (dId: string) => {
@@ -354,6 +463,50 @@ function WorkstationContent() {
         } catch (err) { alert('เกิดข้อผิดพลาดในการส่งงาน'); }
     };
 
+    const handlePullQueue = async (queue: Queue) => {
+        if (!confirm(`ต้องการดึงคิว ${queue.queue_number} มาที่แผนกนี้ใช่หรือไม่?`)) return;
+
+        try {
+            const currentDeptId = localStorage.getItem('station_dept_id');
+            const personnelId = localStorage.getItem('user_id');
+
+            if (!currentDeptId) {
+                alert('ไม่พบข้อมูลแผนกปัจจุบัน');
+                return;
+            }
+
+            // Call endpoint to transfer (pull)
+            // Using /transfer-bulk for consistency, or single transfer
+            // POST /api/queues/transfer-bulk or PUT /api/queues/:id/transfer
+            // Let's use single transfer PUT /api/queues/:id/transfer
+            await api.put(`/queues/${queue.id}/transfer`, {
+                target_dept_id: currentDeptId,
+                personnel_id: personnelId,
+                // Status will auto reset to WAITING by default in backend or we can force it
+                status: 'WAITING'
+            });
+
+            // Clear search to show the pulled queue in local list
+            setSearchTerm('');
+            setSearchResults([]);
+
+            // Refresh local queues
+            fetchQueues(currentDeptId);
+
+            // Auto Select the pulled queue (we know its ID)
+            // Need to wait for fetch? We can set timeout
+            setTimeout(() => {
+                // const q = queues.find(x => x.id === queue.id); 
+                setSelectedIds([queue.id]);
+                setFocusedQueue(queue); // Set focused queue for UI
+                fetchLogs(queue.id);    // Fetch logs for timeline
+            }, 500);
+
+        } catch (err: any) {
+            alert(err.response?.data?.error || 'เกิดข้อผิดพลาดในการดึงคิว');
+        }
+    };
+
     const handleComplete = async () => {
         if (selectedIds.length === 0) return;
         if (!confirm(`ยืนยันจบงาน ${selectedIds.length} รายการ?`)) return;
@@ -452,7 +605,10 @@ function WorkstationContent() {
     };
 
     // Filter & Logic
+    // Filter & Logic
     const filteredQueues = queues.filter(q =>
+        q.status !== 'COMPLETED' &&
+        q.status !== 'CANCELLED' &&
         q.queue_number.toLowerCase().includes(searchTerm.toLowerCase())
     );
 
@@ -504,7 +660,9 @@ function WorkstationContent() {
                                             <RefreshCw size={32} className="opacity-20" />
                                         </div>
                                         <p className="text-xl font-bold text-slate-600">ไม่พบรายการคิว</p>
-                                        <p className="text-sm font-medium opacity-60 mt-1">รายการคิวใหม่จะปรากฏที่นี่โดยอัตโนมัติ</p>
+                                        <p className="text-sm font-medium opacity-60 mt-1">
+                                            {searchTerm ? 'ไม่พบข้อมูลที่ค้นหา (Global Search)' : 'รายการคิวรอจะปรากฏที่นี่โดยอัตโนมัติ'}
+                                        </p>
                                     </div>
                                 ) : (
                                     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3 min-[1250px]:grid-cols-4 2xl:grid-cols-5 gap-5 pb-24 lg:pb-0">
@@ -512,16 +670,18 @@ function WorkstationContent() {
                                         {filteredQueues.filter(q => q.status === 'WAITING').map((q, index) => {
                                             const isSelected = selectedIds.includes(q.id);
                                             const badgeColor = q.badge_color || '#6366f1';
+                                            const currentDeptId = Number(localStorage.getItem('station_dept_id'));
+                                            const isExternal = q.current_department_id !== currentDeptId;
 
                                             return (
                                                 <div
                                                     key={q.id}
-                                                    onClick={() => handleCardClick(q)}
+                                                    onClick={() => !isExternal && handleCardClick(q)}
                                                     className={`
                                                 relative p-6 rounded-[2rem] cursor-pointer select-none transition-all duration-300 group border-[3px] overflow-hidden clay-card-hover
                                                 ${isSelected
                                                             ? 'bg-white shadow-2xl scale-[1.02] z-10'
-                                                            : 'bg-white/60 backdrop-blur-xl border-white/40 hover:border-pink-200'
+                                                            : (isExternal ? 'bg-slate-50 border-slate-200 opacity-90 hover:opacity-100' : 'bg-white/60 backdrop-blur-xl border-white/40 hover:border-pink-200')
                                                         }
                                             `}
                                                     style={{
@@ -529,28 +689,35 @@ function WorkstationContent() {
                                                         animation: `fadeIn 0.5s ease-out ${index * 50}ms backwards`
                                                     } as React.CSSProperties}
                                                 >
-                                                    <div className="absolute top-0 left-0 w-full h-2 opacity-80" style={{ backgroundColor: badgeColor }}></div>
+                                                    <div className="absolute top-0 left-0 w-full h-2 opacity-80" style={{ backgroundColor: isExternal ? '#94a3b8' : badgeColor }}></div>
 
-                                                    <div
-                                                        onClick={(e) => toggleSelect(e, q.id)}
-                                                        className={`absolute top-5 right-5 transition-all z-10 p-1.5 rounded-xl hover:bg-slate-50
+                                                    {!isExternal && (
+                                                        <div
+                                                            onClick={(e) => toggleSelect(e, q.id)}
+                                                            className={`absolute top-5 right-5 transition-all z-10 p-1.5 rounded-xl hover:bg-slate-50
                                                     ${isSelected ? 'text-[#e72289] scale-110 bg-pink-50' : 'text-slate-300 hover:text-[#e72289]'}
                                                 `}
-                                                    >
-                                                        {isSelected ? <CheckSquare size={24} className="drop-shadow-sm" style={{ color: badgeColor }} /> : <Square size={24} />}
-                                                    </div>
+                                                        >
+                                                            {isSelected ? <CheckSquare size={24} className="drop-shadow-sm" style={{ color: badgeColor }} /> : <Square size={24} />}
+                                                        </div>
+                                                    )}
 
                                                     <div className="mt-2 mb-5 flex justify-between items-start">
                                                         <span
                                                             className="px-3 py-1.5 text-[10px] font-bold rounded-lg uppercase tracking-wide shadow-sm"
-                                                            style={{ backgroundColor: `${badgeColor}15`, color: badgeColor }}
+                                                            style={{ backgroundColor: isExternal ? '#f1f5f9' : `${badgeColor}15`, color: isExternal ? '#64748b' : badgeColor }}
                                                         >
                                                             {q.type_name}
                                                         </span>
+                                                        {isExternal && (
+                                                            <span className="px-2 py-1 text-[9px] font-bold rounded bg-slate-200 text-slate-500">
+                                                                {q.department_name || 'แผนกอื่น'}
+                                                            </span>
+                                                        )}
                                                     </div>
 
                                                     <div className="flex items-center justify-between mb-4">
-                                                        <div className={`text-5xl font-black tracking-tighter ${GeistMono.className} ${overdueAlertMinutes > 0 && getWaitingMinutes(q.updated_at || q.created_at) >= overdueAlertMinutes ? 'text-red-600 animate-pulse' : 'text-slate-900'}`}>
+                                                        <div className={`text-5xl font-black tracking-tighter ${GeistMono.className} ${!isExternal && overdueAlertMinutes > 0 && getWaitingMinutes(q.updated_at || q.created_at) >= overdueAlertMinutes ? 'text-red-600 animate-pulse' : 'text-slate-900'} ${isExternal ? 'opacity-50' : ''}`}>
                                                             {q.queue_number}
                                                         </div>
                                                     </div>
@@ -559,23 +726,36 @@ function WorkstationContent() {
                                                         <User size={14} className="text-slate-400" /> {q.role_name}
                                                     </div>
 
-                                                    <div className="pt-4 border-t border-slate-100 text-[11px] text-slate-400 flex items-center justify-between font-bold">
-                                                        <div className="flex items-center gap-1.5">
-                                                            <Clock size={12} />
-                                                            {new Date(q.created_at).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })}
-                                                        </div>
-
-                                                        {/* Remark Icon in Footer */}
-                                                        {q.remark_count > 0 && (
-                                                            <div
-                                                                onClick={(e) => openManageRemarks(e, q)}
-                                                                className="flex items-center gap-1 px-2.5 py-1 bg-amber-100 text-amber-600 rounded-full hover:bg-amber-200 transition-colors cursor-pointer shadow-sm"
-                                                            >
-                                                                <AlertTriangle size={10} />
-                                                                <span className={`text-[9px] font-bold ${GeistMono.className}`}>{q.remark_count}</span>
+                                                    {isExternal ? (
+                                                        <button
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                handlePullQueue(q);
+                                                            }}
+                                                            className="w-full py-2.5 bg-gradient-to-r from-pink-500 to-rose-500 hover:from-pink-600 hover:to-rose-600 text-white rounded-xl font-bold text-xs shadow-md shadow-pink-200 transition-all active:scale-95 flex items-center justify-center gap-2"
+                                                        >
+                                                            <span>ดึงคิว (Pull)</span>
+                                                            <ArrowRight size={14} />
+                                                        </button>
+                                                    ) : (
+                                                        <div className="pt-4 border-t border-slate-100 text-[11px] text-slate-400 flex items-center justify-between font-bold">
+                                                            <div className="flex items-center gap-1.5">
+                                                                <Clock size={12} />
+                                                                {new Date(q.created_at).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })}
                                                             </div>
-                                                        )}
-                                                    </div>
+
+                                                            {/* Remark Icon in Footer */}
+                                                            {q.remark_count > 0 && (
+                                                                <div
+                                                                    onClick={(e) => openManageRemarks(e, q)}
+                                                                    className="flex items-center gap-1 px-2.5 py-1 bg-amber-100 text-amber-600 rounded-full hover:bg-amber-200 transition-colors cursor-pointer shadow-sm"
+                                                                >
+                                                                    <AlertTriangle size={10} />
+                                                                    <span className={`text-[9px] font-bold ${GeistMono.className}`}>{q.remark_count}</span>
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    )}
                                                 </div>
                                             );
                                         })}
@@ -595,6 +775,8 @@ function WorkstationContent() {
                                         {filteredQueues.filter(q => q.status === 'PROCESSING').map((q, index) => {
                                             const isSelected = selectedIds.includes(q.id);
                                             const badgeColor = q.badge_color || '#6366f1';
+                                            const currentDeptId = Number(localStorage.getItem('station_dept_id'));
+                                            const isExternal = q.current_department_id !== currentDeptId;
 
                                             return (
                                                 <div
@@ -629,6 +811,11 @@ function WorkstationContent() {
                                                         >
                                                             {q.type_name}
                                                         </span>
+                                                        {isExternal && (
+                                                            <span className="px-2 py-1 text-[9px] font-bold rounded bg-slate-200 text-slate-500">
+                                                                {q.department_name || 'แผนกอื่น'}
+                                                            </span>
+                                                        )}
                                                     </div>
 
                                                     <div className={`text-5xl font-black mb-4 tracking-tighter text-slate-900 ${GeistMono.className}`}>
@@ -737,7 +924,7 @@ function WorkstationContent() {
                                     {/* Selected Queues List (In Header) */}
                                     <div className="mt-4 pt-4 border-t border-slate-100/50">
                                         <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2 ml-1">
-                                            รายการที่เลือก:
+                                            รายการที่เลือก (คลิกเพื่อลบออก):
                                         </div>
                                         <div className="flex flex-wrap gap-2 max-h-[100px] overflow-y-auto custom-scrollbar pr-2">
                                             {queues
@@ -745,9 +932,25 @@ function WorkstationContent() {
                                                 .map(q => (
                                                     <div
                                                         key={q.id}
-                                                        className="px-2.5 py-1 bg-white border border-slate-200 text-slate-600 rounded-lg text-[10px] font-bold shadow-sm"
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            const newSelected = selectedIds.filter(id => id !== q.id);
+                                                            setSelectedIds(newSelected);
+                                                            if (newSelected.length === 1) {
+                                                                const remainingQ = queues.find(x => x.id === newSelected[0]);
+                                                                if (remainingQ) {
+                                                                    setFocusedQueue(remainingQ);
+                                                                    fetchLogs(remainingQ.id);
+                                                                }
+                                                            } else if (newSelected.length === 0) {
+                                                                setFocusedQueue(null);
+                                                            }
+                                                        }}
+                                                        title="คลิกเพื่อนำออกจากรายการที่เลือก"
+                                                        className="px-2.5 py-1 bg-white border border-slate-200 text-slate-600 rounded-lg text-[10px] font-bold shadow-sm cursor-pointer hover:bg-red-50 hover:text-red-500 hover:border-red-200 transition-all flex items-center gap-1 group/badge"
                                                     >
                                                         {q.queue_number}
+                                                        <X size={10} className="opacity-0 group-hover/badge:opacity-100 transition-opacity" />
                                                     </div>
                                                 ))
                                             }
