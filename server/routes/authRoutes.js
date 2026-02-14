@@ -15,43 +15,49 @@ router.post('/login', async (req, res) => {
 
     // 1. Verify Turnstile Token
     let TURNSTILE_SECRET_KEY = process.env.TURNSTILE_SECRET_KEY || '1x0000000000000000000000000000000AA';
+    let TURNSTILE_ENABLED = true; // Default to true
 
     try {
-        const [settings] = await db.query('SELECT turnstile_secret_key FROM system_settings LIMIT 1');
-        if (settings.length > 0 && settings[0].turnstile_secret_key) {
-            TURNSTILE_SECRET_KEY = settings[0].turnstile_secret_key;
+        const [settings] = await db.query('SELECT turnstile_secret_key, turnstile_enabled FROM system_settings LIMIT 1');
+        if (settings.length > 0) {
+            if (settings[0].turnstile_secret_key) TURNSTILE_SECRET_KEY = settings[0].turnstile_secret_key;
+            // Handle logical 0/1 or true/false
+            if (settings[0].turnstile_enabled !== undefined && settings[0].turnstile_enabled !== null) {
+                TURNSTILE_ENABLED = !!settings[0].turnstile_enabled;
+            }
         }
     } catch (settingsErr) {
         console.error('Failed to fetch Turnstile Secret Key from DB:', settingsErr);
     }
 
-    if (!turnstileToken) {
-        return res.status(400).json({ error: 'Captcha Validation Failed (Missing Token)' });
-    }
-
-    try {
-        const verifyRes = await axios.post('https://challenges.cloudflare.com/turnstile/v0/siteverify', {
-            secret: TURNSTILE_SECRET_KEY,
-            response: turnstileToken,
-            remoteip: clientIp
-        }, {
-            headers: { 'Content-Type': 'application/json' }
-        });
-
-        if (!verifyRes.data.success) {
-            // Log Failed Attempt (Captcha Invalid)
-            await db.query(`
-                INSERT INTO login_logs (username, action_type, ip_address, user_agent, details)
-                VALUES (?, 'LOGIN_FAILED', ?, ?, 'Captcha Invalid')
-            `, [username || 'unknown', clientIp, userAgent]);
-
-            return res.status(400).json({ error: 'Captcha Validation Failed' });
+    // Only verify if enabled
+    if (TURNSTILE_ENABLED) {
+        if (!turnstileToken) {
+            return res.status(400).json({ error: 'Captcha Validation Failed (Missing Token)' });
         }
-    } catch (verifyErr) {
-        console.error('Turnstile Verify Error:', verifyErr);
-        // Fail open or closed? Here failing open might be risky, but failing closed blocks users if CF is down.
-        // Let's fail closed for security but log it.
-        return res.status(500).json({ error: 'Captcha Verification Error' });
+
+        try {
+            const verifyRes = await axios.post('https://challenges.cloudflare.com/turnstile/v0/siteverify', {
+                secret: TURNSTILE_SECRET_KEY,
+                response: turnstileToken,
+                remoteip: clientIp
+            }, {
+                headers: { 'Content-Type': 'application/json' }
+            });
+
+            if (!verifyRes.data.success) {
+                // Log Failed Attempt (Captcha Invalid)
+                await db.query(`
+                    INSERT INTO login_logs (username, action_type, ip_address, user_agent, details)
+                    VALUES (?, 'LOGIN_FAILED', ?, ?, 'Captcha Invalid')
+                `, [username || 'unknown', clientIp, userAgent]);
+
+                return res.status(400).json({ error: 'Captcha Validation Failed' });
+            }
+        } catch (verifyErr) {
+            console.error('Turnstile Verify Error:', verifyErr);
+            return res.status(500).json({ error: 'Captcha Verification Error' });
+        }
     }
 
     try {

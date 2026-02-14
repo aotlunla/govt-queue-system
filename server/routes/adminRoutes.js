@@ -48,8 +48,11 @@ router.get('/personnel', async (req, res) => {
 // GET /settings (Public - for footer, display)
 router.get('/settings', async (req, res) => {
   try {
-    const [rows] = await db.query('SELECT agency_name, logo_url, footer_text, announcement_text, announcement_active, announcement_start, announcement_end, kiosk_settings, turnstile_site_key FROM system_settings LIMIT 1');
+    const [rows] = await db.query('SELECT agency_name, logo_url, footer_text, announcement_text, announcement_active, announcement_start, announcement_end, kiosk_settings, turnstile_site_key, turnstile_enabled FROM system_settings LIMIT 1');
     const result = rows[0] || {};
+    // Default turnstile_enabled to true if undefined (for old records before migration script runs fully)
+    if (result.turnstile_enabled === undefined || result.turnstile_enabled === null) result.turnstile_enabled = 1;
+
     // Parse kiosk_settings if it's a string
     if (result.kiosk_settings && typeof result.kiosk_settings === 'string') {
       result.kiosk_settings = JSON.parse(result.kiosk_settings);
@@ -115,20 +118,20 @@ router.put('/settings', async (req, res) => {
   const {
     agency_name, announcement_text, announcement_start, announcement_end, announcement_active,
     overdue_alert_minutes, logo_url, footer_text,
-    turnstile_site_key, turnstile_secret_key
+    turnstile_site_key, turnstile_secret_key, turnstile_enabled
   } = req.body;
 
   try {
     const [rows] = await db.query('SELECT id FROM system_settings LIMIT 1');
     if (rows.length > 0) {
       await db.query(
-        'UPDATE system_settings SET agency_name=?, announcement_text=?, announcement_start=?, announcement_end=?, announcement_active=?, overdue_alert_minutes=?, logo_url=?, footer_text=?, turnstile_site_key=?, turnstile_secret_key=?, updated_at=NOW() WHERE id=?',
-        [agency_name, announcement_text, announcement_start, announcement_end, announcement_active, overdue_alert_minutes, logo_url || null, footer_text || null, turnstile_site_key || null, turnstile_secret_key || null, rows[0].id]
+        'UPDATE system_settings SET agency_name=?, announcement_text=?, announcement_start=?, announcement_end=?, announcement_active=?, overdue_alert_minutes=?, logo_url=?, footer_text=?, turnstile_site_key=?, turnstile_secret_key=?, turnstile_enabled=?, updated_at=NOW() WHERE id=?',
+        [agency_name, announcement_text, announcement_start, announcement_end, announcement_active, overdue_alert_minutes, logo_url || null, footer_text || null, turnstile_site_key || null, turnstile_secret_key || null, turnstile_enabled === undefined ? 1 : turnstile_enabled, rows[0].id]
       );
     } else {
       await db.query(
-        'INSERT INTO system_settings (agency_name, announcement_text, announcement_start, announcement_end, announcement_active, overdue_alert_minutes, logo_url, footer_text, turnstile_site_key, turnstile_secret_key) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
-        [agency_name, announcement_text, announcement_start, announcement_end, announcement_active, overdue_alert_minutes, logo_url || null, footer_text || null, turnstile_site_key || null, turnstile_secret_key || null]
+        'INSERT INTO system_settings (agency_name, announcement_text, announcement_start, announcement_end, announcement_active, overdue_alert_minutes, logo_url, footer_text, turnstile_site_key, turnstile_secret_key, turnstile_enabled) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+        [agency_name, announcement_text, announcement_start, announcement_end, announcement_active, overdue_alert_minutes, logo_url || null, footer_text || null, turnstile_site_key || null, turnstile_secret_key || null, turnstile_enabled === undefined ? 1 : turnstile_enabled]
       );
     }
     res.json({ success: true });

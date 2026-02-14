@@ -124,9 +124,26 @@ io.on('connection', (socket) => {
 // =======================
 // Start Server
 // =======================
+// =======================
+// Start Server
+// =======================
 const PORT = process.env.PORT || 5000;
-server.listen(PORT, () => {
-  console.log(`✅ Server running on port ${PORT}`);
-  console.log(`   - Frontend Access: http://localhost:3000`);
-  console.log(`   - API Endpoint:    http://localhost:${PORT}/api`);
-});
+const db = require('./config/db'); // Ensure DB connection for migration
+
+async function startServer() {
+  try {
+    // Auto-Migration: Add turnstile_enabled
+    await db.query(`ALTER TABLE system_settings ADD COLUMN IF NOT EXISTS turnstile_enabled BOOLEAN DEFAULT 1`);
+    console.log('✅ Auto-Migration: Checked/Added turnstile_enabled column.');
+  } catch (err) {
+    console.error('⚠️ Auto-Migration Warning:', err.message);
+  }
+
+  server.listen(PORT, () => {
+    console.log(`✅ Server running on port ${PORT}`);
+    console.log(`   - Frontend Access: http://localhost:3000`);
+    console.log(`   - API Endpoint:    http://localhost:${PORT}/api`);
+  });
+}
+
+startServer();

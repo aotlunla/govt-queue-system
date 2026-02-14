@@ -24,23 +24,42 @@ export function TurnstileWidget({ onVerify, onError, className = '' }: Turnstile
         const fetchKey = async () => {
             try {
                 const res = await api.get('/admin/settings');
+
+                // Check if disabled (handled 0, false, null)
+                const isEnabled = res.data.turnstile_enabled !== undefined ? !!res.data.turnstile_enabled : true;
+
+                if (!isEnabled) {
+                    console.log('Turnstile is disabled by admin.');
+                    setSiteKey('DISABLED');
+                    onVerify('DISABLED'); // Auto-verify
+                    setLoading(false);
+                    return;
+                }
+
                 if (res.data.turnstile_site_key) {
                     setSiteKey(res.data.turnstile_site_key);
-                } else if (!siteKey) {
-                    // Fallback to test key if nothing else found
+                } else {
+                    // Fallback to test key if not set
                     setSiteKey('1x00000000000000000000AA');
                 }
             } catch (err) {
                 console.error('Failed to fetch Turnstile key', err);
+                // Fallback to test key on error to allow login attempt (validation will fail on backend if real key is needed)
                 if (!siteKey) setSiteKey('1x00000000000000000000AA');
             } finally {
                 setLoading(false);
             }
         };
         fetchKey();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []); // Run once on mount
 
-    if (!mounted || loading || !siteKey) return <div className="h-[65px] w-full bg-slate-50/50 rounded-xl animate-pulse" />;
+    if (!mounted || loading) return <div className="h-[65px] w-full bg-slate-50/50 rounded-xl animate-pulse" />;
+
+    // If disabled, return nothing (or null)
+    if (siteKey === 'DISABLED') return null;
+
+    if (!siteKey) return <div className="h-[65px] w-full bg-slate-50/50 rounded-xl animate-pulse" />;
 
     return (
         <div className={`flex justify-center ${className}`}>

@@ -26,6 +26,7 @@ export default function SettingsPage() {
     // Turnstile State
     const [turnstileSiteKey, setTurnstileSiteKey] = useState('');
     const [turnstileSecretKey, setTurnstileSecretKey] = useState('');
+    const [turnstileEnabled, setTurnstileEnabled] = useState(true);
 
     // Load settings on mount
     useEffect(() => {
@@ -43,6 +44,9 @@ export default function SettingsPage() {
                 if (res.data.footer_text) setFooterText(res.data.footer_text);
                 if (res.data.turnstile_site_key) setTurnstileSiteKey(res.data.turnstile_site_key);
                 if (res.data.turnstile_secret_key) setTurnstileSecretKey(res.data.turnstile_secret_key);
+                // Default to true if undefined
+                if (res.data.turnstile_enabled !== undefined) setTurnstileEnabled(!!res.data.turnstile_enabled);
+                else setTurnstileEnabled(true);
             } catch (err) {
                 console.error('Failed to fetch settings:', err);
                 // Fallback to public endpoint if protected fails?
@@ -66,7 +70,8 @@ export default function SettingsPage() {
                 logo_url: logoUrl,
                 footer_text: footerText,
                 turnstile_site_key: turnstileSiteKey,
-                turnstile_secret_key: turnstileSecretKey
+                turnstile_secret_key: turnstileSecretKey,
+                turnstile_enabled: turnstileEnabled
             });
             alert('บันทึกการตั้งค่าเรียบร้อยแล้ว');
         } catch (err) {
@@ -149,9 +154,20 @@ export default function SettingsPage() {
                             <h2 className="font-black text-xl text-slate-900">Cloudflare Turnstile</h2>
                             <p className="text-sm font-medium text-slate-500">ตั้งค่าระบบป้องกัน Spam (Captcha)</p>
                         </div>
+                        <div className="ml-auto">
+                            <label className="relative inline-flex items-center cursor-pointer">
+                                <input
+                                    type="checkbox"
+                                    className="sr-only peer"
+                                    checked={turnstileEnabled}
+                                    onChange={(e) => setTurnstileEnabled(e.target.checked)}
+                                />
+                                <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-orange-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-orange-500"></div>
+                            </label>
+                        </div>
                     </div>
 
-                    <div className="space-y-6 mt-6">
+                    <div className={`space-y-6 mt-6 transition-all duration-300 ${turnstileEnabled ? 'opacity-100' : 'opacity-50 grayscale'}`}>
                         <div>
                             <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2 ml-1">Site Key</label>
                             <input
@@ -160,6 +176,7 @@ export default function SettingsPage() {
                                 value={turnstileSiteKey}
                                 onChange={(e) => setTurnstileSiteKey(e.target.value)}
                                 placeholder="0x4AAAAAA..."
+                                disabled={!turnstileEnabled}
                             />
                         </div>
                         <div>
@@ -170,6 +187,7 @@ export default function SettingsPage() {
                                 value={turnstileSecretKey}
                                 onChange={(e) => setTurnstileSecretKey(e.target.value)}
                                 placeholder="0x4AAAAAA..."
+                                disabled={!turnstileEnabled}
                             />
                             <p className="text-xs text-slate-400 font-medium mt-2">
                                 * หากไม่ระบุ จะใช้ค่า Test Key สำหรับการทดสอบ
