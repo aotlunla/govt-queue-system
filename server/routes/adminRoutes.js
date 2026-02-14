@@ -423,28 +423,7 @@ router.delete('/display-configs/:id', async (req, res) => {
 });
 
 
-// PUT /settings (Protected - requires auth)
-router.put('/settings', async (req, res) => {
-  const { agency_name, announcement_text, announcement_start, announcement_end, announcement_active, overdue_alert_minutes, logo_url, footer_text } = req.body;
-  try {
-    const [rows] = await db.query('SELECT id FROM system_settings LIMIT 1');
-    if (rows.length > 0) {
-      await db.query(
-        'UPDATE system_settings SET agency_name=?, announcement_text=?, announcement_start=?, announcement_end=?, announcement_active=?, overdue_alert_minutes=?, logo_url=?, footer_text=?, updated_at=NOW() WHERE id=?',
-        [agency_name, announcement_text, announcement_start, announcement_end, announcement_active, overdue_alert_minutes, logo_url || null, footer_text || null, rows[0].id]
-      );
-    } else {
-      await db.query(
-        'INSERT INTO system_settings (agency_name, announcement_text, announcement_start, announcement_end, announcement_active, overdue_alert_minutes, logo_url, footer_text) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
-        [agency_name, announcement_text, announcement_start, announcement_end, announcement_active, overdue_alert_minutes, logo_url || null, footer_text || null]
-      );
-    }
-    res.json({ success: true });
-  } catch (err) {
-    console.error('Admin Route Error:', err);
-    res.status(500).json({ error: err.message });
-  }
-});
+
 
 // PUT /kiosk-settings (Protected - admin can update)
 router.put('/kiosk-settings', async (req, res) => {

@@ -38,6 +38,21 @@ async function migrate() {
             }
         }
 
+        // Add turnstile_enabled
+        try {
+            await db.query(`
+                ALTER TABLE system_settings 
+                ADD COLUMN turnstile_enabled BOOLEAN DEFAULT 1 AFTER turnstile_secret_key
+            `);
+            console.log('Added turnstile_enabled column');
+        } catch (err) {
+            if (err.code === 'ER_DUP_FIELDNAME') {
+                console.log('turnstile_enabled already exists');
+            } else {
+                throw err;
+            }
+        }
+
         console.log('Migration complete');
         process.exit(0);
     } catch (err) {
