@@ -23,13 +23,19 @@ const server = http.createServer(app);
 // This allows express-rate-limit to correctly identify client IPs
 app.set('trust proxy', 1);
 
-const allowedOrigin = process.env.ALLOWED_ORIGIN || "http://localhost:3000";
+// Allowed Origins (Localhost + Production Vercel)
+const allowedOrigins = [
+  "http://localhost:3000",
+  "https://govt-queue-system.vercel.app",
+  process.env.ALLOWED_ORIGIN || ""
+].filter(Boolean);
 
-// Setup Socket.io (รองรับ Frontend ที่รัน port 3000)
+// Setup Socket.io
 const io = new Server(server, {
   cors: {
-    origin: allowedOrigin,
-    methods: ["GET", "POST", "PUT", "DELETE"]
+    origin: allowedOrigins,
+    methods: ["GET", "POST", "PUT", "DELETE"],
+    credentials: true
   }
 });
 
@@ -46,20 +52,15 @@ app.use(helmet({
       styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
       fontSrc: ["'self'", "https://fonts.gstatic.com"],
       imgSrc: ["'self'", "data:", "blob:"],
-      connectSrc: ["'self'", allowedOrigin, "ws:", "wss:", "https://challenges.cloudflare.com", "https://mlicense.vercel.app", "http://localhost:5555"],
+      connectSrc: ["'self'", ...allowedOrigins, "ws:", "wss:", "https://challenges.cloudflare.com", "https://mlicense.vercel.app", "http://localhost:5555"],
       frameSrc: ["'self'", "https://challenges.cloudflare.com"]
     }
   },
   crossOriginEmbedderPolicy: false
 }));
 
-// Rate Limiting - General
 
-
-// Apply rate limiting
-// MOVED RATE LIMITING BELOW CORS
-
-// Health Check Endpoint (Bypass Rate Limit)
+// Health Check Endpoint (Bypass Rate Limit & CORS for this specific endpoint if needed, but easier to just allow globally)
 app.get('/api/health', async (req, res) => {
   try {
     await db.query('SELECT 1');
@@ -70,9 +71,19 @@ app.get('/api/health', async (req, res) => {
   }
 });
 
-// CORS
+// CORS Middleware
 app.use(cors({
-  origin: allowedOrigin,
+  origin: function (origin, callback) {
+    // Allow requests with no origin (like mobile apps, curl, or same-origin)
+    if (!origin) return callback(null, true);
+
+    if (allowedOrigins.indexOf(origin) !== -1 || allowedOrigins.some(o => origin.startsWith(o))) {
+      callback(null, true);
+    } else {
+      console.log('❌ Blocked by CORS:', origin);
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
   credentials: true
 }));
 
