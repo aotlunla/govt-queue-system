@@ -13,6 +13,8 @@ interface Personnel {
   id: number;
   fullname: string;
   nickname: string;
+  username: string;
+  role: 'admin' | 'staff';
 }
 
 export default function PersonnelPage() {
@@ -23,13 +25,13 @@ export default function PersonnelPage() {
   // Modal State
   const [showModal, setShowModal] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
-  const [formData, setFormData] = useState({ fullname: '', nickname: '', username: '', password: '' });
+  const [formData, setFormData] = useState({ fullname: '', nickname: '', username: '', password: '', role: 'staff' });
 
   // 1. Fetch Data
   const fetchPersonnel = async () => {
     try {
       setLoading(true);
-      const res = await api.get('/admin/personnel');
+      const res = await api.get('/admin/personnel/full');
       setPersonnel(res.data);
     } catch (err) { console.error(err); }
     finally { setLoading(false); }
@@ -43,7 +45,12 @@ export default function PersonnelPage() {
     try {
       if (editingId) {
         // Edit mode: only send password if changed
-        const payload: any = { fullname: formData.fullname, nickname: formData.nickname, username: formData.username };
+        const payload: any = {
+          fullname: formData.fullname,
+          nickname: formData.nickname,
+          username: formData.username,
+          role: formData.role
+        };
         if (formData.password) {
           payload.password = formData.password;
         }
@@ -52,7 +59,7 @@ export default function PersonnelPage() {
         // Create mode: send all
         await api.post('/admin/personnel', formData);
       }
-      setFormData({ fullname: '', nickname: '', username: '', password: '' });
+      setFormData({ fullname: '', nickname: '', username: '', password: '', role: 'staff' });
       setEditingId(null);
       setShowModal(false);
       fetchPersonnel();
@@ -70,13 +77,13 @@ export default function PersonnelPage() {
   };
 
   const openEdit = (p: Personnel) => {
-    // Note: API might need to return username if we want to edit it. 
-    // Assuming p has username, if not we might need to fetch detailed info or just leave it blank/read-only.
-    // Based on list view, we only have ID, Fullname, Nickname. We might need to fetch full details or update fetchPersonnel to get username.
-    // For now, let's assume p might have it or we default to empty (which might be annoying).
-    // Let's check the interface. Interface Personnel has { id, fullname, nickname }. 
-    // We should update the interface and fetch to include username.
-    setFormData({ fullname: p.fullname, nickname: p.nickname, username: (p as any).username || '', password: '' });
+    setFormData({
+      fullname: p.fullname,
+      nickname: p.nickname,
+      username: p.username || '',
+      password: '',
+      role: p.role || 'staff'
+    });
     setEditingId(p.id);
     setShowModal(true);
   };
@@ -103,7 +110,7 @@ export default function PersonnelPage() {
         </div>
 
         <button
-          onClick={() => { setFormData({ fullname: '', nickname: '', username: '', password: '' }); setEditingId(null); setShowModal(true); }}
+          onClick={() => { setFormData({ fullname: '', nickname: '', username: '', password: '', role: 'staff' }); setEditingId(null); setShowModal(true); }}
           className="px-6 py-2.5 bg-gradient-to-r from-pink-500 to-rose-500 text-white rounded-xl hover:shadow-lg transition flex items-center justify-center gap-2 font-medium"
         >
           <Plus size={18} />
@@ -177,8 +184,11 @@ export default function PersonnelPage() {
                   {p.fullname}
                 </h3>
                 <div className="flex items-center gap-2 mt-1">
-                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider bg-slate-100 px-2 py-0.5 rounded-md border border-slate-200">
-                    Staff
+                  <span className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-md border ${p.role === 'admin'
+                      ? 'bg-rose-100 text-rose-600 border-rose-200'
+                      : 'bg-slate-100 text-slate-500 border-slate-200'
+                    }`}>
+                    {p.role || 'Staff'}
                   </span>
                   {p.nickname && (
                     <span className="text-sm text-slate-500 font-medium">
@@ -220,6 +230,18 @@ export default function PersonnelPage() {
                     value={formData.username}
                     onChange={e => setFormData({ ...formData, username: e.target.value })}
                   />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2 ml-1">ระดับสิทธิ์ (Role)</label>
+                  <select
+                    value={formData.role}
+                    onChange={(e) => setFormData({ ...formData, role: e.target.value })}
+                    className="w-full px-4 py-3 bg-white/50 border border-slate-200 rounded-2xl focus:border-[#e72289] focus:ring-4 focus:ring-pink-500/10 outline-none transition-all font-bold text-slate-700"
+                  >
+                    <option value="staff">Staff (เจ้าหน้าที่ทั่วไป)</option>
+                    <option value="admin">Admin (ผู้ดูแลระบบ)</option>
+                  </select>
                 </div>
 
                 <div>

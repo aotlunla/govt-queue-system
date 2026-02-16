@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { api } from '@/lib/api';
 import {
     Building2, Plus, Trash2, Edit2, X,
-    MapPin, ArrowRight, LayoutGrid, Monitor, CheckCircle2
+    ArrowRight, LayoutGrid, Monitor
 } from 'lucide-react';
 import { GeistSans } from 'geist/font/sans';
 import { GeistMono } from 'geist/font/mono';
@@ -164,7 +164,7 @@ export default function DepartmentsPage() {
                         </button>
                     </div>
 
-                    <div className="flex-1 overflow-y-auto pr-2 custom-scrollbar pb-4 space-y-3">
+                    <div className="flex-1 overflow-y-auto px-2 custom-scrollbar pb-4 space-y-3">
                         {loading ? (
                             <div className="space-y-3">
                                 {[1, 2, 3].map(i => <div key={i} className="h-20 bg-white/50 rounded-2xl animate-pulse border border-slate-100" />)}
@@ -176,7 +176,7 @@ export default function DepartmentsPage() {
                                     onClick={() => handleSelectDept(d)}
                                     className={`group relative p-4 rounded-2xl border cursor-pointer transition-all duration-300
                     ${selectedDept?.id === d.id
-                                            ? 'bg-[#e72289] border-[#e72289] text-white shadow-xl shadow-pink-500/30 ring-2 ring-pink-100 scale-[1.02]'
+                                            ? 'bg-[#e72289] border-[#e72289] text-white ring-2 ring-pink-100 scale-[1.02]'
                                             : 'bg-white/80 backdrop-blur-xl border-white/60 text-slate-800 hover:border-pink-200 hover:shadow-lg'
                                         }`}
                                 >
@@ -361,7 +361,7 @@ export default function DepartmentsPage() {
                                         value={deptForm.status_message || ''}
                                         onChange={(e) => setDeptForm({ ...deptForm, status_message: e.target.value })}
                                     />
-                                    <p className="text-[10px] text-slate-400 mt-1 ml-1 font-medium">* ข้อความนี้จะแสดงในหน้าติดตามสถานะแทนคำว่า "รอเรียกคิว" (รองรับการเว้นบรรทัด)</p>
+                                    <p className="text-[10px] text-slate-400 mt-1 ml-1 font-medium">* ข้อความนี้จะแสดงในหน้าติดตามสถานะแทนคำว่า &quot;รอเรียกคิว&quot; (รองรับการเว้นบรรทัด)</p>
                                 </div>
 
                                 <div className="pt-4 flex gap-4">
