@@ -59,6 +59,17 @@ app.use(helmet({
 // Apply rate limiting
 // MOVED RATE LIMITING BELOW CORS
 
+// Health Check Endpoint (Bypass Rate Limit)
+app.get('/api/health', async (req, res) => {
+  try {
+    await db.query('SELECT 1');
+    res.json({ status: 'ok', timestamp: new Date() });
+  } catch (err) {
+    console.error('❌ Health Check Failed:', err.message);
+    res.status(503).json({ status: 'error', message: 'Database connection failed' });
+  }
+});
+
 // CORS
 app.use(cors({
   origin: allowedOrigin,
@@ -67,7 +78,7 @@ app.use(cors({
 
 // Rate Limiting - General
 const generalLimiter = rateLimit({
-  windowMs: 15 * 60 * 10000, // 15 minutes
+  windowMs: 15 * 60 * 1000, // 15 minutes
   max: 10000, // 2000 requests per window (handles multiple pages polling simultaneously)
   message: { error: 'Too many requests, please try again later' }
 });
@@ -139,16 +150,7 @@ async function startServer() {
     console.error('⚠️ Auto-Migration Warning:', err.message);
   }
 
-  // Health Check Endpoint (For Frontend Overlay)
-  app.get('/api/health', async (req, res) => {
-    try {
-      await db.query('SELECT 1');
-      res.json({ status: 'ok', timestamp: new Date() });
-    } catch (err) {
-      console.error('❌ Health Check Failed:', err.message);
-      res.status(503).json({ status: 'error', message: 'Database connection failed' });
-    }
-  });
+
 
   server.listen(PORT, () => {
     console.log(`✅ Server running on port ${PORT}`);
