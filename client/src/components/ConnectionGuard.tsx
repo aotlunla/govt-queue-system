@@ -37,8 +37,8 @@ export function ConnectionGuard() {
         // Check immediately on mount
         checkHealth();
 
-        // Poll every 30 seconds
-        const interval = setInterval(checkHealth, 30000);
+        // Poll every 2 minutes (120000 ms) instead of 30 seconds to reduce server load
+        const interval = setInterval(checkHealth, 120000);
         return () => clearInterval(interval);
     }, []);
 
