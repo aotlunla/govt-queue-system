@@ -92,14 +92,14 @@ app.get('/api/health', async (req, res) => {
 
 const generalLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 10000, // 2000 requests per window (handles multiple pages polling simultaneously)
+  max: 100000, // 100,000 requests per window (High enough to avoid issues)
   message: { error: 'Too many requests, please try again later' }
 });
 
 // Rate Limiting - Login (Stricter)
 const loginLimiter = rateLimit({
-  windowMs: 15 * 60 * 10000, // 15 minutes
-  max: 10000, // 100 login attempts (Relaxed for Dev)
+  windowMs: 15 * 60 * 1000, // 15 minutes (Fixed typo)
+  max: 100000, // 100,000 login attempts (Practically disabled)
   message: { error: 'เข้าสู่ระบบผิดพลาดหลายครั้ง กรุณารอ 15 นาที' }
 });
 
