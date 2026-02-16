@@ -453,21 +453,37 @@ router.put('/kiosk-settings', async (req, res) => {
 // GET /logs - Fetch login logs (Admin only)
 router.get('/logs', authMiddleware, adminOnly, async (req, res) => {
   try {
-    const page = parseInt(req.query.page) || 1;
-    const limit = parseInt(req.query.limit) || 20;
-    const offset = (page - 1) * limit;
+    const { page = 1, limit = 20, date } = req.query;
+    const offset = (parseInt(page) - 1) * parseInt(limit);
 
-    const [logs] = await db.query(`
+    let query = `
             SELECT 
                 l.*,
                 p.fullname as personnel_name
             FROM login_logs l
             LEFT JOIN personnel p ON l.personnel_id = p.id
-            ORDER BY l.created_at DESC
-            LIMIT ? OFFSET ?
-        `, [limit, offset]);
+        `;
 
-    const [countResult] = await db.query('SELECT COUNT(*) as total FROM login_logs');
+    const params = [];
+    const countParams = [];
+
+    if (date) {
+      query += ' WHERE DATE(l.created_at) = ?';
+      params.push(date);
+      countParams.push(date);
+    }
+
+    query += ' ORDER BY l.created_at DESC LIMIT ? OFFSET ?';
+    params.push(parseInt(limit), offset);
+
+    const [logs] = await db.query(query, params);
+
+    let countQuery = 'SELECT COUNT(*) as total FROM login_logs';
+    if (date) {
+      countQuery += ' WHERE DATE(created_at) = ?';
+    }
+
+    const [countResult] = await db.query(countQuery, countParams);
     const total = countResult[0].total;
 
     res.json({

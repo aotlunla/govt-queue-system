@@ -25,10 +25,13 @@ export default function LoginLogsPage() {
     const [page, setPage] = useState(1);
     const [totalPages, setTotalPages] = useState(1);
 
+    // Date State (Default to Today)
+    const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
+
     const fetchLogs = async (pageNum: number) => {
         setLoading(true);
         try {
-            const res = await api.get(`/admin/logs?page=${pageNum}`);
+            const res = await api.get(`/admin/logs?page=${pageNum}&date=${date}`);
             setLogs(res.data.logs);
             setTotalPages(res.data.pagination.totalPages);
             setPage(pageNum);
@@ -41,7 +44,7 @@ export default function LoginLogsPage() {
 
     useEffect(() => {
         fetchLogs(1);
-    }, []);
+    }, [date]); // Refetch when date changes
 
     const formatDate = (dateString: string) => {
         return new Date(dateString).toLocaleString('th-TH', {
@@ -72,6 +75,15 @@ export default function LoginLogsPage() {
                     </p>
                 </div>
                 <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 px-3 py-2 bg-white border border-slate-200 rounded-xl shadow-sm">
+                        <span className="text-slate-500 text-sm font-bold">วันที่:</span>
+                        <input
+                            type="date"
+                            value={date}
+                            onChange={(e) => setDate(e.target.value)}
+                            className="bg-transparent text-slate-700 font-bold outline-none text-sm"
+                        />
+                    </div>
                     <button
                         onClick={() => fetchLogs(page)}
                         className="px-4 py-2 bg-white border border-slate-200 rounded-xl text-slate-600 font-bold hover:bg-slate-50 shadow-sm transition-all"
@@ -110,7 +122,7 @@ export default function LoginLogsPage() {
                             ) : logs.length === 0 ? (
                                 <tr>
                                     <td colSpan={6} className="p-12 text-center text-slate-400 font-bold">
-                                        ไม่พบประวัติการเข้าใช้งาน
+                                        ไม่พบประวัติการเข้าใช้งานในวันที่เลือก
                                     </td>
                                 </tr>
                             ) : (

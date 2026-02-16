@@ -54,12 +54,15 @@ export default function StatsPage() {
         count: d.count
     })) || [];
 
+    const COLORS = ['#e72289', '#6366f1', '#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899', '#8b5cf6'];
+
+    // Calculate Percentages for Pie Chart
+    const totalTypeCount = stats?.byType?.reduce((sum: number, t: any) => sum + t.count, 0) || 0;
     const typeData = stats?.byType?.map((t: any) => ({
         name: t.name,
-        value: t.count
+        value: t.count,
+        percent: totalTypeCount > 0 ? ((t.count / totalTypeCount) * 100).toFixed(1) : 0
     })) || [];
-
-    const COLORS = ['#e72289', '#6366f1', '#3b82f6', '#10b981', '#f59e0b', '#8b5cf6'];
 
     return (
         <div className={`space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700 ${GeistSans.className}`}>
@@ -187,50 +190,72 @@ export default function StatsPage() {
                     </div>
                 </div>
 
-                {/* 3. By Type Chart (Recharts PieChart) */}
-                <div className="bg-white/80 backdrop-blur-xl p-8 rounded-[2rem] border border-white/60 shadow-sm">
-                    <div className="flex justify-between items-center mb-8">
+                {/* 3. By Type Chart (Pie Chart + Table) */}
+                <div className="bg-white/80 backdrop-blur-xl p-8 rounded-[2rem] border border-white/60 shadow-sm flex flex-col">
+                    <div className="flex justify-between items-center mb-6">
                         <h3 className="text-xl font-black text-slate-900 flex items-center gap-3">
                             <div className="p-2.5 bg-purple-50 rounded-xl text-purple-600"><PieChartIcon size={20} /></div>
                             แยกตามประเภท
                         </h3>
                     </div>
 
-                    <div className="h-[350px] w-full relative">
-                        {typeData.length > 0 ? (
-                            <ResponsiveContainer width="100%" height="100%">
-                                <PieChart>
-                                    <Pie
-                                        data={typeData}
-                                        cx="50%"
-                                        cy="50%"
-                                        innerRadius={60}
-                                        outerRadius={80}
-                                        paddingAngle={5}
-                                        dataKey="value"
-                                        stroke="none"
-                                    >
-                                        {typeData.map((_entry: any, index: number) => (
-                                            <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                                        ))}
-                                    </Pie>
-                                    <Tooltip
-                                        contentStyle={{ backgroundColor: 'rgba(255, 255, 255, 0.9)', borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)', backdropFilter: 'blur(8px)' }}
-                                        itemStyle={{ color: '#1e293b', fontWeight: 'bold', fontFamily: 'var(--font-geist-sans)' }}
-                                    />
-                                    <Legend
-                                        verticalAlign="bottom"
-                                        height={36}
-                                        iconType="circle"
-                                        formatter={(value, entry: any) => <span className="text-slate-600 font-bold text-sm ml-1">{value}</span>}
-                                    />
-                                </PieChart>
-                            </ResponsiveContainer>
-                        ) : (
-                            <div className="w-full h-full flex items-center justify-center text-slate-300">
-                                <p className="font-medium">ไม่มีข้อมูล</p>
-                            </div>
-                        )}
+                    <div className="flex-1 flex flex-col items-center justify-center gap-8">
+                        {/* Chart Section */}
+                        <div className="h-[200px] w-full relative">
+                            {typeData.length > 0 ? (
+                                <ResponsiveContainer width="100%" height="100%">
+                                    <PieChart>
+                                        <Pie
+                                            data={typeData}
+                                            cx="50%"
+                                            cy="50%"
+                                            innerRadius={60}
+                                            outerRadius={80}
+                                            paddingAngle={5}
+                                            dataKey="value"
+                                            stroke="none"
+                                        >
+                                            {typeData.map((_entry: any, index: number) => (
+                                                <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                                            ))}
+                                        </Pie>
+                                        <Tooltip
+                                            contentStyle={{ backgroundColor: 'rgba(255, 255, 255, 0.9)', borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)', backdropFilter: 'blur(8px)' }}
+                                            itemStyle={{ color: '#1e293b', fontWeight: 'bold', fontFamily: 'var(--font-geist-sans)' }}
+                                        />
+                                    </PieChart>
+                                </ResponsiveContainer>
+                            ) : (
+                                <div className="w-full h-full flex items-center justify-center text-slate-300">
+                                    <p className="font-medium">ไม่มีข้อมูล</p>
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Legend Table Section */}
+                        <div className="w-full">
+                            <table className="w-full text-sm">
+                                <thead className="text-slate-400 text-xs font-bold uppercase tracking-wider border-b border-slate-100">
+                                    <tr>
+                                        <th className="pb-2 text-left">ประเภท</th>
+                                        <th className="pb-2 text-right">จำนวน</th>
+                                        <th className="pb-2 text-right">%</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-slate-50 font-medium">
+                                    {typeData.map((entry: any, index: number) => (
+                                        <tr key={index}>
+                                            <td className="py-2 flex items-center gap-2 text-slate-600">
+                                                <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: COLORS[index % COLORS.length] }}></span>
+                                                <span className="truncate max-w-[120px]" title={entry.name}>{entry.name}</span>
+                                            </td>
+                                            <td className="py-2 text-right text-slate-900 font-bold">{entry.value}</td>
+                                            <td className="py-2 text-right text-slate-500">{entry.percent}%</td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
                 </div>
 
