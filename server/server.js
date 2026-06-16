@@ -27,13 +27,14 @@ app.set('trust proxy', 1);
 const allowedOrigins = [
   "http://localhost:3000",
   "https://govt-queue-system.vercel.app",
+  "https://govt-queue-system-2.vercel.app",
   process.env.ALLOWED_ORIGIN || ""
 ].filter(Boolean);
 
 // Setup Socket.io
 const io = new Server(server, {
   cors: {
-    origin: allowedOrigins,
+    origin: true, // Allow any origin
     methods: ["GET", "POST", "PUT", "DELETE"],
     credentials: true
   }
@@ -42,6 +43,37 @@ const io = new Server(server, {
 // ===============================
 // Security Middleware
 // ===============================
+
+// ===============================
+// Security Middleware
+// ===============================
+
+// Enable Pre-Flight for Private Network Access (HTTPS -> HTTP Localhost)
+// Must be BEFORE cors() to ensure header is set on preflight
+app.use((req, res, next) => {
+  if (req.headers["access-control-request-private-network"]) {
+    res.setHeader("Access-Control-Allow-Private-Network", "true");
+  }
+  next();
+});
+
+// Define CORS Options
+const corsOptions = {
+  origin: function (origin, callback) {
+    // Allow ALL origins
+    callback(null, true);
+  },
+  credentials: true,
+  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With", "Access-Control-Allow-Private-Network"]
+};
+
+// CORS Middleware (Must be first)
+app.use(cors(corsOptions));
+// Handle Preflight explicitly (Use regex to avoid path-to-regexp parsing errors with '*')
+app.options(/(.*)/, cors(corsOptions));
+
+
 
 // Helmet - Security Headers
 app.use(helmet({
@@ -52,7 +84,7 @@ app.use(helmet({
       styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
       fontSrc: ["'self'", "https://fonts.gstatic.com"],
       imgSrc: ["'self'", "data:", "blob:"],
-      connectSrc: ["'self'", ...allowedOrigins, "ws:", "wss:", "https://challenges.cloudflare.com", "https://mlicense.vercel.app", "http://localhost:5555"],
+      connectSrc: ["'self'", "*", "ws:", "wss:", "https://challenges.cloudflare.com", "https://mlicense.vercel.app", "http://localhost:5555"],
       frameSrc: ["'self'", "https://challenges.cloudflare.com"]
     }
   },
@@ -62,21 +94,7 @@ app.use(helmet({
 
 
 
-// CORS Middleware
-app.use(cors({
-  origin: function (origin, callback) {
-    // Allow requests with no origin (like mobile apps, curl, or same-origin)
-    if (!origin) return callback(null, true);
 
-    if (allowedOrigins.indexOf(origin) !== -1 || allowedOrigins.some(o => origin.startsWith(o))) {
-      callback(null, true);
-    } else {
-      console.log('❌ Blocked by CORS:', origin);
-      callback(new Error('Not allowed by CORS'));
-    }
-  },
-  credentials: true
-}));
 
 // Rate Limiting - General
 // Health Check Endpoint (Bypass Rate Limit but allow CORS)
@@ -132,6 +150,10 @@ app.use('/api/auth', authRoutes);
 
 // 4. Upload routes removed - Logo now uses URL instead of file upload
 
+// 5. External API (Chrome Extension)
+const externalRoutes = require('./routes/externalRoutes');
+app.use('/api/external', externalRoutes);
+
 // =======================
 // Socket Connection Event
 // =======================
@@ -159,6 +181,29 @@ async function startServer() {
     // Auto-Migration: Add turnstile_enabled
     await db.query(`ALTER TABLE system_settings ADD COLUMN IF NOT EXISTS turnstile_enabled BOOLEAN DEFAULT 1`);
     console.log('✅ Auto-Migration: Checked/Added turnstile_enabled column.');
+
+    // Auto-Migration: Add case_info (JSON) to queues
+    await db.query(`ALTER TABLE queues ADD COLUMN IF NOT EXISTS case_info JSON DEFAULT NULL`);
+    console.log('✅ Auto-Migration: Checked/Added case_info column.');
+
+    // Auto-Migration: Add Generated Columns for Search (redCase, redYy)
+    // Try/Catch for specific index creation to avoid errors if already exists
+    try {
+      await db.query(`
+            ALTER TABLE queues 
+            ADD COLUMN IF NOT EXISTS red_case VARCHAR(50) GENERATED ALWAYS AS (json_unquote(json_extract(case_info, '$.redCase'))) VIRTUAL,
+            ADD COLUMN IF NOT EXISTS red_yy VARCHAR(50) GENERATED ALWAYS AS (json_unquote(json_extract(case_info, '$.redYy'))) VIRTUAL
+        `);
+      // Add Index if not exists (MySQL doesn't support IF NOT EXISTS for INDEX directly in all versions, but we catch error)
+      await db.query(`CREATE INDEX idx_red_case ON queues(red_case)`);
+      await db.query(`CREATE INDEX idx_red_yy ON queues(red_yy)`);
+      console.log('✅ Auto-Migration: Added Generated Columns & Indexes for Search.');
+    } catch (err) {
+      if (err.code !== 'ER_DUP_KEYNAME') {
+        console.log('ℹ️ Auto-Migration (Index):', err.message);
+      }
+    }
+
   } catch (err) {
     console.error('⚠️ Auto-Migration Warning:', err.message);
   }
