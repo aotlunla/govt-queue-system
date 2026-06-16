@@ -27,6 +27,7 @@ app.set('trust proxy', 1);
 const allowedOrigins = [
   "http://localhost:3000",
   "https://govt-queue-system.vercel.app",
+  "https://govt-queue-system-2.vercel.app",
   process.env.ALLOWED_ORIGIN || ""
 ].filter(Boolean);
 
